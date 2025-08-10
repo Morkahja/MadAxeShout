@@ -1,7 +1,0 @@
-## Interface: 11200
-## Title: MadAxe Shout (Turtle)
-## Notes: Random emote/yell on Battle Shout with dungeon-aware chances. Vanilla 1.12 API.
-## Author: Alex (MadAxeClan)
-MAS_Emotes.lua
-MAS_Yells.lua
-MadAxeShout.lua
