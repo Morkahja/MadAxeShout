@@ -46,7 +46,7 @@ emotes = {
     "sparks fly from her fingers as she touches exposed wire.",
     "slams an ignition crystal into a shell and lobs it into battle.",
     "strikes steel against flint and watches the flames spread.",
-    "kicks over a crate marked "volatile" and grins at the noise.",
+    "kicks over a crate marked 'volatile' and grins at the noise.",
     "snarls as raw fury crackles off her armor like static.",
     "slams her boots down the air thickens with bloodlust.",
     "lets out a warcry that sharpens every nearby weapon.",
