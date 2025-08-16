@@ -1,0 +1,8 @@
+## Interface: 11200
+## Title: MadAxeBuxbrew
+## Notes: Battle Shout emotes for Buxbrew, the mad dwarf warrior
+## Author: Alex Ludwig
+## Version: 1.0
+## SavedVariables: MadAxeBuxbrewSaved
+
+MadAxeBuxbrew.lua
