@@ -1,70 +1,112 @@
--- MadAxeBuxbrew.lua
--- Buxbrew Battle Shout Emotes Addon
+-- MadAxeBuxbrew v1.1 (Turtle WoW 1.12)
+-- Posts one random custom /e when you CAST Battle Shout.
+-- Uses classic CHAT_MSG_SPELL_SELF_BUFF instead of aura scanning for reliability.
 
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("PLAYER_AURAS_CHANGED")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+-------------------------------------------------
+-- CONFIG
+-------------------------------------------------
+local SPELL_NAME  = "Battle Shout" -- change via /mae spell <name> (localized)
+local COOLDOWN    = 4              -- seconds anti-spam
+local DEBUG       = false          -- /mae debug to toggle
 
--- Saved config
-MadAxeBuxbrewSaved = MadAxeBuxbrewSaved or {}
-local spellName = MadAxeBuxbrewSaved.spellName or "Battle Shout"
-local lastTrigger = 0
-
--- Emotes pool
-local emotes = {
-    "slams a keg down hard enough to make the tables jump.",
-    "howls so loud it makes mugs jump off tables.",
-    "bangs a mug against her shield, froth flying everywhere.",
-    "cracks her knuckles like breaking bones before a brawl.",
-    "lets out a roar that rattles bottles on the shelves.",
-    "pounds the table with her fist, making tankards spill.",
-    "kicks over a chair and snarls like she's starting a bar fight.",
-    "laughs like a lunatic with foam dripping from her beard.",
-    "stomps the stone floor, shaking dust from the ceiling.",
-    "throws her head back and bellows like a mad drunken queen."
+-- Emotes pool (add as many as you want; keep ASCII quotes)
+local EMOTES = {
+  "slams a keg down hard enough to make the tables jump.",
+  "howls so loud it makes mugs jump off tables.",
+  "bangs a mug against her shield, froth flying everywhere.",
+  "cracks her knuckles like breaking bones before a brawl.",
+  "lets out a roar that rattles bottles on the shelves.",
+  "pounds the table with her fist, making tankards spill.",
+  "kicks over a chair and snarls like she's starting a bar fight.",
+  "laughs like a lunatic with foam dripping from her beard.",
+  "stomps the stone floor, shaking dust from the ceiling.",
+  "throws her head back and bellows like a mad drunken queen."
 }
 
--- Helper to pick random emote
-local function GetRandomEmote()
-    return emotes[math.random(1, table.getn(emotes))]
+-------------------------------------------------
+-- helpers (1.12 safe, no '#' operator)
+-------------------------------------------------
+local function tlen(t)
+  if not t then return 0 end
+  if table.getn then return table.getn(t) end
+  return 0
 end
 
--- Slash command to change spell name
+local function rand(t)
+  local n = tlen(t)
+  if n < 1 then return nil end
+  return t[math.random(1, n)]
+end
+
+local function dprint(msg)
+  if DEBUG then
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg))
+  end
+end
+
+-------------------------------------------------
+-- core
+-------------------------------------------------
+local lastOut = 0
+
+local function maybeEmote()
+  local now = GetTime()
+  if now - lastOut < COOLDOWN then
+    dprint("cooldown")
+    return
+  end
+  lastOut = now
+  local msg = rand(EMOTES)
+  if msg then
+    SendChatMessage(msg, "EMOTE")
+    dprint("emote: "..msg)
+  else
+    dprint("no emotes in pool")
+  end
+end
+
+-- When you cast a self buff, Vanilla fires CHAT_MSG_SPELL_SELF_BUFF.
+-- Example (enUS): "You cast Battle Shout."
+local function handleSelfBuff(msg)
+  if not msg or msg == "" then return end
+  if string.find(msg, SPELL_NAME, 1, true) then
+    dprint("matched: "..msg)
+    maybeEmote()
+  end
+end
+
+-------------------------------------------------
+-- events
+-------------------------------------------------
+local f = CreateFrame("Frame")
+f:SetScript("OnEvent", function(_, event, arg1)
+  if event == "PLAYER_ENTERING_WORLD" then
+    math.randomseed(math.floor(GetTime()*1000))
+    dprint("loaded; watching for: "..SPELL_NAME)
+  elseif event == "CHAT_MSG_SPELL_SELF_BUFF" then
+    handleSelfBuff(arg1)
+  end
+end)
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
+f:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
+
+-------------------------------------------------
+-- slash: /mae spell <name>  |  /mae debug  |  /mae test
+-------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
-    local cmd, rest = msg:match("^(%S*)%s*(.-)$")
-    if cmd == "spell" and rest ~= "" then
-        spellName = rest
-        MadAxeBuxbrewSaved.spellName = rest
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r Watching spell: " .. rest)
-    else
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew usage:|r /mae spell <Battle Shout name>")
-    end
+  msg = msg or ""
+  msg = string.gsub(msg, "^%s+", "")
+  local cmd, rest = string.match(msg, "^(%S+)%s*(.-)$")
+  if cmd == "spell" and rest and rest ~= "" then
+    SPELL_NAME = rest
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r watching spell: "..SPELL_NAME)
+  elseif cmd == "debug" then
+    DEBUG = not DEBUG
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r debug is "..(DEBUG and "ON" or "OFF"))
+  elseif cmd == "test" then
+    maybeEmote()
+  else
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae spell <name>  |  /mae debug  |  /mae test")
+  end
 end
-
--- Aura check
-local function CheckAura()
-    for i=1,40 do
-        local name = UnitBuff("player", i)
-        if not name then break end
-        if name == spellName then
-            local now = GetTime()
-            if now - lastTrigger > 4 then
-                lastTrigger = now
-                local emote = GetRandomEmote()
-                SendChatMessage(emote, "EMOTE")
-            end
-            break
-        end
-    end
-end
-
--- Event handler
-frame:SetScript("OnEvent", function(_, event)
-    if event == "PLAYER_AURAS_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
-        CheckAura()
-    end
-end)
-
--- Seed randomness
-math.randomseed(time())
