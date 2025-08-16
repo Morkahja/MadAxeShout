@@ -1,15 +1,15 @@
--- MadAxeBuxbrew v1.3 (Turtle/Vanilla 1.12)
--- When you CAST or GAIN Battle Shout, post ONE random custom /e.
+-- MadAxeBuxbrew v1.4 (Turtle/Vanilla 1.12)
+-- Robust path: wrap CastSpellByName / CastSpell, confirm via aura gain, then /e once.
 
 -------------------------------------------------
 -- CONFIG
 -------------------------------------------------
-local SPELL_NAME  = "Battle Shout" -- /mae spell <localized name>
-local COOLDOWN    = 4              -- seconds
+local SPELL_NAME  = "Battle Shout" -- /mae spell <localized name> to change
+local COOLDOWN    = 4              -- seconds between outputs
 local DEBUG       = false          -- /mae debug
-local TRACE       = false          -- /mae trace (very verbose)
+local TRACE       = false          -- /mae trace (verbose events)
 
--- Buxbrew-flavored emotes (ASCII quotes only)
+-- Buxbrew-flavored emotes
 local EMOTES = {
   "lets out a savage roar.",
   "howls like a beast unchained.",
@@ -79,92 +79,102 @@ local EMOTES = {
 -------------------------------------------------
 -- 1.12-safe helpers (no '#' operator, no varargs)
 -------------------------------------------------
-local function tlen(t)
-  if not t then return 0 end
-  if table.getn then return table.getn(t) end
-  return 0
-end
-
-local function rand(t)
-  local n = tlen(t)
-  if n < 1 then return nil end
-  return t[math.random(1, n)]
-end
-
-local function dprint(msg)
-  if DEBUG then
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg))
-  end
-end
-
-local function tprint(event, msg)
-  if TRACE then
-    DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00MAE TRACE:|r "..tostring(event).." :: "..tostring(msg or ""))
-  end
-end
+local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
+local function rand(t) local n=tlen(t); if n<1 then return nil end; return t[math.random(1,n)] end
+local function dprint(msg) if DEBUG then DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg)) end end
+local function tprint(event,msg) if TRACE then DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00MAE TRACE:|r "..tostring(event).." :: "..tostring(msg or "")) end end
 
 -------------------------------------------------
--- core
+-- State
 -------------------------------------------------
-local lastOut = 0
+local lastOut   = 0
+local pendingBS = false
+local pendingTS = 0
+local PENDING_WINDOW = 3 -- seconds to wait for aura gain after cast
+
+-------------------------------------------------
+-- Emote fire with cooldown
+-------------------------------------------------
 local function maybeEmote()
   local now = GetTime()
-  if now - lastOut < COOLDOWN then
-    dprint("cooldown")
-    return
-  end
+  if now - lastOut < COOLDOWN then dprint("cooldown"); return end
   lastOut = now
   local e = rand(EMOTES)
-  if e then
-    SendChatMessage(e, "EMOTE")
-    dprint("emote: "..e)
-  end
-end
-
--- unified handler for cast/gain events
-local function handle(event, msg)
-  tprint(event, msg)
-  if not msg or msg == "" then return end
-  -- match plain substring; user can set localized name via /mae spell
-  if string.find(msg, SPELL_NAME, 1, true) then
-    dprint("match: "..event)
-    maybeEmote()
-  end
+  if e then SendChatMessage(e, "EMOTE"); dprint("emote: "..e) end
 end
 
 -------------------------------------------------
--- events
+-- Aura check (Vanilla UnitBuff)
+-------------------------------------------------
+local function playerHasBS()
+  for i=1,32 do
+    local name = UnitBuff("player", i)
+    if not name then break end
+    if name == SPELL_NAME then return true end
+  end
+  return false
+end
+
+-------------------------------------------------
+-- Wrap the old spellcast APIs
+-------------------------------------------------
+local _Orig_CastSpellByName = CastSpellByName
+function CastSpellByName(name, onSelf)
+  if name and string.find(name, SPELL_NAME, 1, true) then
+    pendingBS = true; pendingTS = GetTime()
+    dprint("CastSpellByName match: "..name)
+  end
+  return _Orig_CastSpellByName(name, onSelf)
+end
+
+local _Orig_CastSpell = CastSpell
+function CastSpell(slot, bookType)
+  -- Try to resolve spell name from spellbook (Vanilla: GetSpellName exists)
+  local sName = nil
+  if slot and bookType then
+    sName = GetSpellName(slot, bookType)
+  end
+  if sName and string.find(sName, SPELL_NAME, 1, true) then
+    pendingBS = true; pendingTS = GetTime()
+    dprint("CastSpell match: "..sName)
+  end
+  return _Orig_CastSpell(slot, bookType)
+end
+
+-------------------------------------------------
+-- Events: confirm aura gain and timeout pending
 -------------------------------------------------
 local f = CreateFrame("Frame")
-f:SetScript("OnEvent", function(_, event, arg1)
+f:SetScript("OnEvent", function(_, event)
   if event == "PLAYER_ENTERING_WORLD" then
     math.randomseed(math.floor(GetTime()*1000))
     dprint("loaded; watching: "..SPELL_NAME)
-  elseif event == "CHAT_MSG_SPELL_SELF_BUFF" then
-    handle(event, arg1) -- e.g. "You cast Battle Shout."
-  elseif event == "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS" then
-    handle(event, arg1) -- e.g. "You gain Battle Shout."
-  elseif event == "SPELLCAST_START" then
-    tprint(event, arg1) -- arg1 = spell name
-    if arg1 == SPELL_NAME then
-      dprint("match: SPELLCAST_START")
+    pendingBS = playerHasBS() -- initialize state
+  elseif event == "PLAYER_AURAS_CHANGED" then
+    if pendingBS and playerHasBS() then
+      dprint("aura confirmed")
+      pendingBS = false
       maybeEmote()
     end
   end
 end)
-
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
-f:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS")
-f:RegisterEvent("SPELLCAST_START")
+f:RegisterEvent("PLAYER_AURAS_CHANGED")
+
+-- simple OnUpdate to timeout a failed/blocked cast so pending doesn't stick forever
+f:SetScript("OnUpdate", function()
+  if pendingBS and (GetTime() - pendingTS > PENDING_WINDOW) then
+    dprint("pending timeout")
+    pendingBS = false
+  end
+end)
 
 -------------------------------------------------
--- slash: /mae spell <name> | /mae debug | /mae trace | /mae test
+-- /mae commands
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
-  msg = msg or ""
-  msg = string.gsub(msg, "^%s+", "")
+  msg = msg or ""; msg = string.gsub(msg, "^%s+", "")
   local cmd, rest = string.match(msg, "^(%S+)%s*(.-)$")
   if cmd == "spell" and rest and rest ~= "" then
     SPELL_NAME = rest
@@ -178,6 +188,6 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
   elseif cmd == "test" then
     maybeEmote()
   else
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae spell <name> | /mae debug | /mae trace | /mae test")
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae spell <name> | /mae debug | /mae test")
   end
 end
