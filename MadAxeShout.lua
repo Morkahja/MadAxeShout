@@ -69,4 +69,55 @@ local function fireOne()
             if em then DoEmote(em) end
         else
             local msg = rand(emotes)
-            if msg then SendChatMessage(msg, "EMOTE")
+            if msg then SendChatMessage(msg, "EMOTE") end
+        end
+    end
+end
+
+-- Detect Battle Shout via classic chat event
+local function onSpellSelfBuff(msg)
+    if not enabled or not msg or msg == "" then return end
+    if string.find(msg, SPELL_NAME, 1, true) then
+        fireOne()
+    end
+end
+
+-- -------- events --------
+frame:SetScript("OnEvent", function(self, event, arg1)
+    if event == "PLAYER_ENTERING_WORLD" then
+        math.randomseed(GetTime())
+    elseif event == "CHAT_MSG_SPELL_SELF_BUFF" then
+        onSpellSelfBuff(arg1)
+    elseif event == "ZONE_CHANGED_NEW_AREA" or event == "ZONE_CHANGED" or event == "MINIMAP_ZONE_CHANGED" then
+        -- nothing needed; isDungeon() reads zone text on demand
+    end
+end)
+
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+frame:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
+frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+frame:RegisterEvent("ZONE_CHANGED")
+frame:RegisterEvent("MINIMAP_ZONE_CHANGED")
+
+-- -------- slash commands --------
+SLASH_MADAXESHOUT1 = "/mas"
+SlashCmdList["MADAXESHOUT"] = function(msg)
+    msg = string.lower(msg or "")
+    if msg == "on" then
+        enabled = true
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff5500MadAxeShout|r enabled.")
+    elseif msg == "off" then
+        enabled = false
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff5500MadAxeShout|r disabled.")
+    elseif msg == "test" then
+        fireOne()
+    elseif string.sub(msg,1,5) == "spell" then
+        local n = string.match(msg, "^spell%s+(.+)$")
+        if n and n ~= "" then
+            SPELL_NAME = n
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff5500MadAxeShout|r spell set to: "..SPELL_NAME)
+        end
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff5500MadAxeShout|r commands: /mas on, /mas off, /mas test, /mas spell <name>")
+    end
+end
