@@ -1,15 +1,15 @@
--- MadAxeBuxbrew v1.2a (Turtle WoW 1.12)
--- Fires ONE random /e when you CAST or GAIN Battle Shout.
--- Uses classic CHAT_MSG_SPELL_SELF_BUFF and CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS.
+-- MadAxeBuxbrew v1.3 (Turtle/Vanilla 1.12)
+-- When you CAST or GAIN Battle Shout, post ONE random custom /e.
 
 -------------------------------------------------
 -- CONFIG
 -------------------------------------------------
-local SPELL_NAME  = "Battle Shout" -- /mae spell <localized name> to change
-local COOLDOWN    = 4              -- seconds anti-spam / de-dupe window
+local SPELL_NAME  = "Battle Shout" -- /mae spell <localized name>
+local COOLDOWN    = 4              -- seconds
 local DEBUG       = false          -- /mae debug
+local TRACE       = false          -- /mae trace (very verbose)
 
--- Buxbrew-flavored emotes (add more if you like)
+-- Buxbrew-flavored emotes (ASCII quotes only)
 local EMOTES = {
   "lets out a savage roar.",
   "howls like a beast unchained.",
@@ -97,36 +97,38 @@ local function dprint(msg)
   end
 end
 
+local function tprint(event, msg)
+  if TRACE then
+    DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00MAE TRACE:|r "..tostring(event).." :: "..tostring(msg or ""))
+  end
+end
+
 -------------------------------------------------
 -- core
 -------------------------------------------------
 local lastOut = 0
-
 local function maybeEmote()
   local now = GetTime()
   if now - lastOut < COOLDOWN then
-    dprint("cooldown; skipping")
+    dprint("cooldown")
     return
   end
   lastOut = now
-  local msg = rand(EMOTES)
-  if msg then
-    SendChatMessage(msg, "EMOTE")
-    dprint("emote: "..msg)
-  else
-    dprint("no emotes in pool")
+  local e = rand(EMOTES)
+  if e then
+    SendChatMessage(e, "EMOTE")
+    dprint("emote: "..e)
   end
 end
 
--- handle chat messages from classic self-buff events
-local function handleSelfBuff(event, msg)
+-- unified handler for cast/gain events
+local function handle(event, msg)
+  tprint(event, msg)
   if not msg or msg == "" then return end
-  -- Match by buff name; works for both "You cast Battle Shout." and "You gain Battle Shout."
+  -- match plain substring; user can set localized name via /mae spell
   if string.find(msg, SPELL_NAME, 1, true) then
-    dprint(event.." matched: "..msg)
+    dprint("match: "..event)
     maybeEmote()
-  else
-    dprint(event.." seen but no match: "..msg)
   end
 end
 
@@ -139,18 +141,25 @@ f:SetScript("OnEvent", function(_, event, arg1)
     math.randomseed(math.floor(GetTime()*1000))
     dprint("loaded; watching: "..SPELL_NAME)
   elseif event == "CHAT_MSG_SPELL_SELF_BUFF" then
-    handleSelfBuff(event, arg1)
+    handle(event, arg1) -- e.g. "You cast Battle Shout."
   elseif event == "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS" then
-    handleSelfBuff(event, arg1)
+    handle(event, arg1) -- e.g. "You gain Battle Shout."
+  elseif event == "SPELLCAST_START" then
+    tprint(event, arg1) -- arg1 = spell name
+    if arg1 == SPELL_NAME then
+      dprint("match: SPELLCAST_START")
+      maybeEmote()
+    end
   end
 end)
 
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")            -- "You cast Battle Shout."
-f:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS")  -- "You gain Battle Shout."
+f:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
+f:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS")
+f:RegisterEvent("SPELLCAST_START")
 
 -------------------------------------------------
--- slash: /mae spell <name> | /mae debug | /mae test
+-- slash: /mae spell <name> | /mae debug | /mae trace | /mae test
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
@@ -163,9 +172,12 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
   elseif cmd == "debug" then
     DEBUG = not DEBUG
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r debug "..(DEBUG and "ON" or "OFF"))
+  elseif cmd == "trace" then
+    TRACE = not TRACE
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r trace "..(TRACE and "ON" or "OFF"))
   elseif cmd == "test" then
     maybeEmote()
   else
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae spell <name>  |  /mae debug  |  /mae test")
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae spell <name> | /mae debug | /mae trace | /mae test")
   end
 end
