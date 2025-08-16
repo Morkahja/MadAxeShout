@@ -1,6 +1,6 @@
--- MadAxeBuxbrew v1.2 (Turtle WoW 1.12)
--- Fires ONE random /e when you cast or gain Battle Shout.
--- Hooks classic events: CHAT_MSG_SPELL_SELF_BUFF, CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS
+-- MadAxeBuxbrew v1.2a (Turtle WoW 1.12)
+-- Fires ONE random /e when you CAST or GAIN Battle Shout.
+-- Uses classic CHAT_MSG_SPELL_SELF_BUFF and CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS.
 
 -------------------------------------------------
 -- CONFIG
@@ -9,7 +9,7 @@ local SPELL_NAME  = "Battle Shout" -- /mae spell <localized name> to change
 local COOLDOWN    = 4              -- seconds anti-spam / de-dupe window
 local DEBUG       = false          -- /mae debug
 
--- Buxbrew-flavored emotes
+-- Buxbrew-flavored emotes (add more if you like)
 local EMOTES = {
   "lets out a savage roar.",
   "howls like a beast unchained.",
@@ -77,7 +77,7 @@ local EMOTES = {
 }
 
 -------------------------------------------------
--- 1.12-safe helpers (no '#' operator)
+-- 1.12-safe helpers (no '#' operator, no varargs)
 -------------------------------------------------
 local function tlen(t)
   if not t then return 0 end
@@ -91,14 +91,10 @@ local function rand(t)
   return t[math.random(1, n)]
 end
 
-local function dprint(...)
-  if not DEBUG then return end
-  local s = ""
-  for i=1, arg.n or select("#", ...) do
-    local v = (arg and arg[i]) or select(i, ...)
-    s = s .. tostring(v) .. " "
+local function dprint(msg)
+  if DEBUG then
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg))
   end
-  DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r " .. s)
 end
 
 -------------------------------------------------
@@ -116,7 +112,7 @@ local function maybeEmote()
   local msg = rand(EMOTES)
   if msg then
     SendChatMessage(msg, "EMOTE")
-    dprint("emote:", msg)
+    dprint("emote: "..msg)
   else
     dprint("no emotes in pool")
   end
@@ -125,12 +121,12 @@ end
 -- handle chat messages from classic self-buff events
 local function handleSelfBuff(event, msg)
   if not msg or msg == "" then return end
-  -- match by buff name; covers both "You cast Battle Shout." and "You gain Battle Shout."
+  -- Match by buff name; works for both "You cast Battle Shout." and "You gain Battle Shout."
   if string.find(msg, SPELL_NAME, 1, true) then
-    dprint(event .. " matched:", msg)
+    dprint(event.." matched: "..msg)
     maybeEmote()
   else
-    dprint(event .. " seen but no match:", msg)
+    dprint(event.." seen but no match: "..msg)
   end
 end
 
@@ -141,7 +137,7 @@ local f = CreateFrame("Frame")
 f:SetScript("OnEvent", function(_, event, arg1)
   if event == "PLAYER_ENTERING_WORLD" then
     math.randomseed(math.floor(GetTime()*1000))
-    dprint("loaded; watching:", SPELL_NAME)
+    dprint("loaded; watching: "..SPELL_NAME)
   elseif event == "CHAT_MSG_SPELL_SELF_BUFF" then
     handleSelfBuff(event, arg1)
   elseif event == "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS" then
@@ -163,10 +159,10 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
   local cmd, rest = string.match(msg, "^(%S+)%s*(.-)$")
   if cmd == "spell" and rest and rest ~= "" then
     SPELL_NAME = rest
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r watching: " .. SPELL_NAME)
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r watching: "..SPELL_NAME)
   elseif cmd == "debug" then
     DEBUG = not DEBUG
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r debug " .. (DEBUG and "ON" or "OFF"))
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r debug "..(DEBUG and "ON" or "OFF"))
   elseif cmd == "test" then
     maybeEmote()
   else
