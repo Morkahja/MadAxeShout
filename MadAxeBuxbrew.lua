@@ -207,3 +207,15 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae debug | /mae dump | /mae test")
   end
 end
+
+SLASH_MADAXEBUXBREW2 = "/maeemote"
+SlashCmdList["MADAXEBUXBREW2"] = function()
+  local e = rand(EMOTES)
+  if e then
+    SendChatMessage(e, "EMOTE")
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE TEST:|r "..e)
+  else
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE TEST:|r no emotes in list")
+  end
+end
+
