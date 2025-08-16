@@ -1,8 +1,6 @@
 ## Interface: 11200
 ## Title: MadAxeBuxbrew
-## Notes: Battle Shout emotes for Buxbrew, the mad dwarf warrior
-## Author: Alex Ludwig
-## Version: 1.0
-## SavedVariables: MadAxeBuxbrewSaved
+## Notes: Posts a random /e when Battle Shout buff appears (Turtle/Vanilla 1.12)
+## Version: 1.5
 
 MadAxeBuxbrew.lua
