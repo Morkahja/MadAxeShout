@@ -1,15 +1,27 @@
--- MadAxeBuxbrew v1.4 (Turtle/Vanilla 1.12)
--- Robust path: wrap CastSpellByName / CastSpell, confirm via aura gain, then /e once.
+-- MadAxeBuxbrew v1.5 (Turtle/Vanilla 1.12)
+-- Fires ONE random /e when YOU GAIN Battle Shout (any rank).
+-- Locale-agnostic: matches by buff ICON and (if available) SPELL ID.
 
 -------------------------------------------------
 -- CONFIG
 -------------------------------------------------
-local SPELL_NAME  = "Battle Shout" -- /mae spell <localized name> to change
-local COOLDOWN    = 4              -- seconds between outputs
-local DEBUG       = false          -- /mae debug
-local TRACE       = false          -- /mae trace (verbose events)
+local COOLDOWN = 4   -- seconds between outputs
+local DEBUG    = false  -- /mae debug
 
--- Buxbrew-flavored emotes
+-- All ranks of Battle Shout (Vanilla IDs); Turtle may add more, icon match covers that.
+local BS_IDS = {
+  [6673]=true,  -- Rank 1
+  [5242]=true,  -- Rank 2
+  [6192]=true,  -- Rank 3
+  [11549]=true, -- Rank 4
+  [11550]=true, -- Rank 5
+  [11551]=true, -- Rank 6 (highest in 1.12)
+}
+
+-- Icon used by Battle Shout buffs in Vanilla/Turtle (locale independent)
+local BS_ICON = "Interface\\Icons\\Ability_Warrior_BattleShout"
+
+-- Your Buxbrew emotes (ASCII quotes only)
 local EMOTES = {
   "lets out a savage roar.",
   "howls like a beast unchained.",
@@ -73,121 +85,101 @@ local EMOTES = {
   "lets her fury flow, as even the earth seems ready to strike.",
   "erupts with presence and all hesitation burns away.",
   "ignites a fire so fierce it spreads through every heart.",
-  "lashes the spirit of war into her kin with one brutal shout."
+  "lashes the spirit of war into her kin with one brutal shout.",
 }
 
 -------------------------------------------------
 -- 1.12-safe helpers (no '#' operator, no varargs)
 -------------------------------------------------
-local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
-local function rand(t) local n=tlen(t); if n<1 then return nil end; return t[math.random(1,n)] end
-local function dprint(msg) if DEBUG then DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg)) end end
-local function tprint(event,msg) if TRACE then DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00MAE TRACE:|r "..tostring(event).." :: "..tostring(msg or "")) end end
+local function tlen(t)
+  if t and table.getn then return table.getn(t) end
+  return 0
+end
 
--------------------------------------------------
--- State
--------------------------------------------------
-local lastOut   = 0
-local pendingBS = false
-local pendingTS = 0
-local PENDING_WINDOW = 3 -- seconds to wait for aura gain after cast
+local function rand(t)
+  local n = tlen(t)
+  if n < 1 then return nil end
+  return t[math.random(1, n)]
+end
 
--------------------------------------------------
--- Emote fire with cooldown
--------------------------------------------------
-local function maybeEmote()
-  local now = GetTime()
-  if now - lastOut < COOLDOWN then dprint("cooldown"); return end
-  lastOut = now
-  local e = rand(EMOTES)
-  if e then SendChatMessage(e, "EMOTE"); dprint("emote: "..e) end
+local function dprint(msg)
+  if DEBUG then DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg)) end
 end
 
 -------------------------------------------------
--- Aura check (Vanilla UnitBuff)
+-- Buff detection (works on any locale)
 -------------------------------------------------
-local function playerHasBS()
-  for i=1,32 do
-    local name = UnitBuff("player", i)
-    if not name then break end
-    if name == SPELL_NAME then return true end
+local function playerHasBattleShout()
+  -- Vanilla shows up to 16 buffs; Turtle often supports more. Loop safely.
+  for i = 1, 32 do
+    local icon, _, _, _, _, _, spellId = UnitBuff("player", i)
+    if not icon then break end
+    -- Prefer spellId if Turtle provides it:
+    if spellId and BS_IDS[spellId] then return true end
+    -- Fallback to icon match:
+    if icon == BS_ICON then return true end
   end
   return false
 end
 
 -------------------------------------------------
--- Wrap the old spellcast APIs
+-- Core
 -------------------------------------------------
-local _Orig_CastSpellByName = CastSpellByName
-function CastSpellByName(name, onSelf)
-  if name and string.find(name, SPELL_NAME, 1, true) then
-    pendingBS = true; pendingTS = GetTime()
-    dprint("CastSpellByName match: "..name)
+local lastOut = 0
+local hadBS   = false
+
+local function maybeEmote()
+  local now = GetTime()
+  if now - lastOut < COOLDOWN then dprint("cooldown"); return end
+  lastOut = now
+  local e = rand(EMOTES)
+  if e then
+    SendChatMessage(e, "EMOTE")
+    dprint("emote: "..e)
+  else
+    dprint("no emotes in pool")
   end
-  return _Orig_CastSpellByName(name, onSelf)
 end
 
-local _Orig_CastSpell = CastSpell
-function CastSpell(slot, bookType)
-  -- Try to resolve spell name from spellbook (Vanilla: GetSpellName exists)
-  local sName = nil
-  if slot and bookType then
-    sName = GetSpellName(slot, bookType)
+local function onAurasChanged()
+  local has = playerHasBattleShout()
+  if (not hadBS) and has then
+    dprint("Battle Shout gained")
+    maybeEmote()
   end
-  if sName and string.find(sName, SPELL_NAME, 1, true) then
-    pendingBS = true; pendingTS = GetTime()
-    dprint("CastSpell match: "..sName)
-  end
-  return _Orig_CastSpell(slot, bookType)
+  hadBS = has
 end
 
 -------------------------------------------------
--- Events: confirm aura gain and timeout pending
+-- Events
 -------------------------------------------------
 local f = CreateFrame("Frame")
 f:SetScript("OnEvent", function(_, event)
   if event == "PLAYER_ENTERING_WORLD" then
     math.randomseed(math.floor(GetTime()*1000))
-    dprint("loaded; watching: "..SPELL_NAME)
-    pendingBS = playerHasBS() -- initialize state
+    hadBS = playerHasBattleShout()
+    dprint("loaded; BS present: "..tostring(hadBS))
   elseif event == "PLAYER_AURAS_CHANGED" then
-    if pendingBS and playerHasBS() then
-      dprint("aura confirmed")
-      pendingBS = false
-      maybeEmote()
-    end
+    onAurasChanged()
   end
 end)
+
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_AURAS_CHANGED")
 
--- simple OnUpdate to timeout a failed/blocked cast so pending doesn't stick forever
-f:SetScript("OnUpdate", function()
-  if pendingBS and (GetTime() - pendingTS > PENDING_WINDOW) then
-    dprint("pending timeout")
-    pendingBS = false
-  end
-end)
-
 -------------------------------------------------
--- /mae commands
+-- Slash: /mae debug | /mae test
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
-  msg = msg or ""; msg = string.gsub(msg, "^%s+", "")
-  local cmd, rest = string.match(msg, "^(%S+)%s*(.-)$")
-  if cmd == "spell" and rest and rest ~= "" then
-    SPELL_NAME = rest
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r watching: "..SPELL_NAME)
-  elseif cmd == "debug" then
+  msg = msg or ""
+  msg = string.gsub(msg, "^%s+", "")
+  if msg == "debug" then
     DEBUG = not DEBUG
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r debug "..(DEBUG and "ON" or "OFF"))
-  elseif cmd == "trace" then
-    TRACE = not TRACE
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r trace "..(TRACE and "ON" or "OFF"))
-  elseif cmd == "test" then
+  elseif msg == "test" then
     maybeEmote()
   else
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae spell <name> | /mae debug | /mae test")
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae debug  |  /mae test")
   end
 end
