@@ -1,27 +1,21 @@
--- MadAxeBuxbrew v1.5 (Turtle/Vanilla 1.12)
--- Fires ONE random /e when YOU GAIN Battle Shout (any rank).
--- Locale-agnostic: matches by buff ICON and (if available) SPELL ID.
+-- MadAxeBuxbrew v1.6 (Turtle/Vanilla 1.12)
+-- Uses the *classic PlayerBuff API* to detect Battle Shout reliably.
 
 -------------------------------------------------
 -- CONFIG
 -------------------------------------------------
 local COOLDOWN = 4   -- seconds between outputs
-local DEBUG    = false  -- /mae debug
+local DEBUG    = false -- /mae debug
 
--- All ranks of Battle Shout (Vanilla IDs); Turtle may add more, icon match covers that.
-local BS_IDS = {
-  [6673]=true,  -- Rank 1
-  [5242]=true,  -- Rank 2
-  [6192]=true,  -- Rank 3
-  [11549]=true, -- Rank 4
-  [11550]=true, -- Rank 5
-  [11551]=true, -- Rank 6 (highest in 1.12)
-}
-
--- Icon used by Battle Shout buffs in Vanilla/Turtle (locale independent)
+-- Icon path used by Battle Shout in 1.12 (locale-agnostic)
 local BS_ICON = "Interface\\Icons\\Ability_Warrior_BattleShout"
 
--- Your Buxbrew emotes (ASCII quotes only)
+-- Optional spell IDs (if Turtle backports them; not required)
+local BS_IDS = {
+  [6673]=true, [5242]=true, [6192]=true, [11549]=true, [11550]=true, [11551]=true,
+}
+
+-- Buxbrew emotes
 local EMOTES = {
   "lets out a savage roar.",
   "howls like a beast unchained.",
@@ -91,35 +85,69 @@ local EMOTES = {
 -------------------------------------------------
 -- 1.12-safe helpers (no '#' operator, no varargs)
 -------------------------------------------------
-local function tlen(t)
-  if t and table.getn then return table.getn(t) end
-  return 0
-end
-
-local function rand(t)
-  local n = tlen(t)
-  if n < 1 then return nil end
-  return t[math.random(1, n)]
-end
-
-local function dprint(msg)
-  if DEBUG then DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg)) end
-end
+local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
+local function rand(t) local n=tlen(t); if n<1 then return nil end; return t[math.random(1,n)] end
+local function dprint(msg) if DEBUG then DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg)) end end
 
 -------------------------------------------------
--- Buff detection (works on any locale)
+-- Battle Shout detection via PlayerBuff API
+-- In 1.12:
+--   GetPlayerBuff(i, "HELPFUL") -> buffIndex or -1
+--   GetPlayerBuffTexture(buffIndex) -> texture path
+--   GetPlayerBuffName(buffIndex) -> "Name" or "Name(Rank X)"
 -------------------------------------------------
-local function playerHasBattleShout()
-  -- Vanilla shows up to 16 buffs; Turtle often supports more. Loop safely.
-  for i = 1, 32 do
-    local icon, _, _, _, _, _, spellId = UnitBuff("player", i)
-    if not icon then break end
-    -- Prefer spellId if Turtle provides it:
-    if spellId and BS_IDS[spellId] then return true end
-    -- Fallback to icon match:
-    if icon == BS_ICON then return true end
+local function playerHasBattleShout_PlayerBuff()
+  -- Iterate visible buff buttons (0..31 covers 32 slots)
+  for i = 0, 31 do
+    local buffIndex = GetPlayerBuff(i, "HELPFUL")
+    if buffIndex and buffIndex >= 0 then
+      local tex = GetPlayerBuffTexture(buffIndex)
+      if tex == BS_ICON then
+        return true
+      end
+      -- Some servers add names/IDs; try to be generous if available
+      local name = GetPlayerBuffName and GetPlayerBuffName(buffIndex)
+      if name then
+        -- strip rank if present: "Battle Shout(Rank 1)" -> "Battle Shout"
+        local base = string.gsub(name, "%s*%b()", "")
+        if base == "Battle Shout" then
+          return true
+        end
+      end
+      -- If Turtle attaches spellId somewhere (non-standard), you can add checks here.
+    end
   end
   return false
+end
+
+-- Fallback that tries UnitBuff if the server has backported newer returns.
+local function playerHasBattleShout_UnitBuff()
+  if not UnitBuff then return false end
+  for i=1, 32 do
+    local a, b, c, d, e, f, g = UnitBuff("player", i)
+    if not a then break end
+    -- handle two common layouts:
+    -- 1) name-first: a=name, c=icon
+    -- 2) icon-first: a=icon
+    local icon = a
+    local name = nil
+    if c and type(c) == "string" and string.find(c, "Interface\\") then
+      icon = c
+      name = a
+    end
+    if icon == BS_ICON then return true end
+    if name == "Battle Shout" then return true end
+    if g and BS_IDS[g] then return true end
+  end
+  return false
+end
+
+local function playerHasBattleShout()
+  if GetPlayerBuff then
+    return playerHasBattleShout_PlayerBuff()
+  else
+    return playerHasBattleShout_UnitBuff()
+  end
 end
 
 -------------------------------------------------
@@ -133,18 +161,13 @@ local function maybeEmote()
   if now - lastOut < COOLDOWN then dprint("cooldown"); return end
   lastOut = now
   local e = rand(EMOTES)
-  if e then
-    SendChatMessage(e, "EMOTE")
-    dprint("emote: "..e)
-  else
-    dprint("no emotes in pool")
-  end
+  if e then SendChatMessage(e, "EMOTE"); dprint("emote: "..e) end
 end
 
 local function onAurasChanged()
   local has = playerHasBattleShout()
   if (not hadBS) and has then
-    dprint("Battle Shout gained")
+    dprint("Battle Shout detected")
     maybeEmote()
   end
   hadBS = has
@@ -163,23 +186,40 @@ f:SetScript("OnEvent", function(_, event)
     onAurasChanged()
   end
 end)
-
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_AURAS_CHANGED")
 
 -------------------------------------------------
--- Slash: /mae debug | /mae test
+-- Slash: /mae debug | /mae dump | /mae test
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
-  msg = msg or ""
-  msg = string.gsub(msg, "^%s+", "")
+  msg = msg or ""; msg = string.gsub(msg, "^%s+", "")
   if msg == "debug" then
     DEBUG = not DEBUG
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r debug "..(DEBUG and "ON" or "OFF"))
   elseif msg == "test" then
     maybeEmote()
+  elseif msg == "dump" then
+    -- Print what the server actually reports for your buffs (helps diagnose)
+    DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00MAE DUMP:|r scanning buffs")
+    if GetPlayerBuff then
+      for i=0,31 do
+        local bi = GetPlayerBuff(i, "HELPFUL")
+        if bi and bi >= 0 then
+          local tex = GetPlayerBuffTexture(bi)
+          local nm  = GetPlayerBuffName and GetPlayerBuffName(bi)
+          DEFAULT_CHAT_FRAME:AddMessage("["..i.."] idx="..bi.." tex="..tostring(tex).." name="..tostring(nm))
+        end
+      end
+    else
+      for i=1,32 do
+        local a,b,c,d,e,f,g = UnitBuff("player", i)
+        if not a then break end
+        DEFAULT_CHAT_FRAME:AddMessage("["..i.."] a="..tostring(a).." b="..tostring(b).." c="..tostring(c).." gID="..tostring(g))
+      end
+    end
   else
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae debug  |  /mae test")
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae debug | /mae dump | /mae test")
   end
 end
