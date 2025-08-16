@@ -1,30 +1,83 @@
--- MadAxeBuxbrew v1.1 (Turtle WoW 1.12)
--- Posts one random custom /e when you CAST Battle Shout.
--- Uses classic CHAT_MSG_SPELL_SELF_BUFF instead of aura scanning for reliability.
+-- MadAxeBuxbrew v1.2 (Turtle WoW 1.12)
+-- Fires ONE random /e when you cast or gain Battle Shout.
+-- Hooks classic events: CHAT_MSG_SPELL_SELF_BUFF, CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS
 
 -------------------------------------------------
 -- CONFIG
 -------------------------------------------------
-local SPELL_NAME  = "Battle Shout" -- change via /mae spell <name> (localized)
-local COOLDOWN    = 4              -- seconds anti-spam
-local DEBUG       = false          -- /mae debug to toggle
+local SPELL_NAME  = "Battle Shout" -- /mae spell <localized name> to change
+local COOLDOWN    = 4              -- seconds anti-spam / de-dupe window
+local DEBUG       = false          -- /mae debug
 
--- Emotes pool (add as many as you want; keep ASCII quotes)
+-- Buxbrew-flavored emotes
 local EMOTES = {
-  "slams a keg down hard enough to make the tables jump.",
-  "howls so loud it makes mugs jump off tables.",
-  "bangs a mug against her shield, froth flying everywhere.",
-  "cracks her knuckles like breaking bones before a brawl.",
-  "lets out a roar that rattles bottles on the shelves.",
-  "pounds the table with her fist, making tankards spill.",
+  "lets out a savage roar.",
+  "howls like a beast unchained.",
+  "beats her chest with her weapon hilt.",
+  "laughs like a berserker as the scent of blood fills the air.",
+  "raises her weapon high.",
+  "growls a deep war-chant.",
+  "roars a brutal challenge.",
+  "stomps the ground.",
+  "howls skyward.",
+  "stomps in rhythm.",
+  "bellows to the wind.",
+  "pounds her chest with both fists.",
+  "throws her head back and howls.",
+  "radiates unshakable fury.",
+  "swings her weapon in a wide arc.",
+  "lets her weapon hum with fury.",
+  "bangs her weapon on iron plates.",
+  "spins her weapon with one hand, letting the wind scream through it.",
+  "taps her weapon against her thigh like a war drum.",
+  "raises her weapon with a grunt, rallying for the first strike.",
+  "snaps her weapon into both hands, grinning ear to ear.",
+  "throws her weapon up, catches it mid-spin, and laughs.",
+  "leans into her weapon with a low growl, daring anyone to charge.",
+  "slashes the air in front of her, then roars with glee.",
+  "holds her weapon to her heart, then slams it down at her feet.",
+  "scrapes her weapon across her armor, sparks flying before the storm.",
   "kicks over a chair and snarls like she's starting a bar fight.",
-  "laughs like a lunatic with foam dripping from her beard.",
-  "stomps the stone floor, shaking dust from the ceiling.",
-  "throws her head back and bellows like a mad drunken queen."
+  "wipes ale foam from her mouth and grins.",
+  "clinks two mugs together till they shatter.",
+  "lifts her mug high, catching the torchlight in her grin.",
+  "laughs as she lights a fuse with her cigar.",
+  "slams a keg tap open as she lets out a war cry.",
+  "grins wide as the fuse burns on her powder keg.",
+  "stands in the ale haze, laughing as the fight starts.",
+  "slams a keg down hard enough to make the tables jump.",
+  "kicks a keg downhill and grins as it bursts open.",
+  "juggles three mugs before throwing one in someone's face.",
+  "lets her powder horn puff smoke as she laughs.",
+  "slaps a bar tab down and walks away laughing.",
+  "slams her mug down and charges.",
+  "strikes flint on her mug handle before charging.",
+  "kicks over a keg and grins as it spills.",
+  "slams her boots on the table, the tavern roars.",
+  "flares with rage, mugs start to slam.",
+  "unleashes a roar that rattles every mug in the room.",
+  "lets her laugh tear through the tavern like a warhorn.",
+  "brims with fury so thick the air smells like spilled ale.",
+  "lets her presence fire up every drunk in the hall.",
+  "stands tall on the table, every brawler swings harder.",
+  "raises her mug, the room drowns in cheers.",
+  "howls so loud it makes mugs jump off tables.",
+  "stomps the floorboards till dust falls from the rafters.",
+  "channels her rage, the whole tavern roars with her.",
+  "beats her chest as every mug nearby sloshes harder.",
+  "unleashes such fury that even the calm start screaming.",
+  "drives her will into the air and the air answers.",
+  "steps forward, the front line surges with strength.",
+  "tenses her muscles, as everyone tightens their grip.",
+  "calls the storm through her veins.",
+  "lets her fury flow, as even the earth seems ready to strike.",
+  "erupts with presence and all hesitation burns away.",
+  "ignites a fire so fierce it spreads through every heart.",
+  "lashes the spirit of war into her kin with one brutal shout."
 }
 
 -------------------------------------------------
--- helpers (1.12 safe, no '#' operator)
+-- 1.12-safe helpers (no '#' operator)
 -------------------------------------------------
 local function tlen(t)
   if not t then return 0 end
@@ -38,10 +91,14 @@ local function rand(t)
   return t[math.random(1, n)]
 end
 
-local function dprint(msg)
-  if DEBUG then
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg))
+local function dprint(...)
+  if not DEBUG then return end
+  local s = ""
+  for i=1, arg.n or select("#", ...) do
+    local v = (arg and arg[i]) or select(i, ...)
+    s = s .. tostring(v) .. " "
   end
+  DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r " .. s)
 end
 
 -------------------------------------------------
@@ -52,26 +109,28 @@ local lastOut = 0
 local function maybeEmote()
   local now = GetTime()
   if now - lastOut < COOLDOWN then
-    dprint("cooldown")
+    dprint("cooldown; skipping")
     return
   end
   lastOut = now
   local msg = rand(EMOTES)
   if msg then
     SendChatMessage(msg, "EMOTE")
-    dprint("emote: "..msg)
+    dprint("emote:", msg)
   else
     dprint("no emotes in pool")
   end
 end
 
--- When you cast a self buff, Vanilla fires CHAT_MSG_SPELL_SELF_BUFF.
--- Example (enUS): "You cast Battle Shout."
-local function handleSelfBuff(msg)
+-- handle chat messages from classic self-buff events
+local function handleSelfBuff(event, msg)
   if not msg or msg == "" then return end
+  -- match by buff name; covers both "You cast Battle Shout." and "You gain Battle Shout."
   if string.find(msg, SPELL_NAME, 1, true) then
-    dprint("matched: "..msg)
+    dprint(event .. " matched:", msg)
     maybeEmote()
+  else
+    dprint(event .. " seen but no match:", msg)
   end
 end
 
@@ -82,16 +141,20 @@ local f = CreateFrame("Frame")
 f:SetScript("OnEvent", function(_, event, arg1)
   if event == "PLAYER_ENTERING_WORLD" then
     math.randomseed(math.floor(GetTime()*1000))
-    dprint("loaded; watching for: "..SPELL_NAME)
+    dprint("loaded; watching:", SPELL_NAME)
   elseif event == "CHAT_MSG_SPELL_SELF_BUFF" then
-    handleSelfBuff(arg1)
+    handleSelfBuff(event, arg1)
+  elseif event == "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS" then
+    handleSelfBuff(event, arg1)
   end
 end)
+
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
+f:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")            -- "You cast Battle Shout."
+f:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS")  -- "You gain Battle Shout."
 
 -------------------------------------------------
--- slash: /mae spell <name>  |  /mae debug  |  /mae test
+-- slash: /mae spell <name> | /mae debug | /mae test
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
@@ -100,10 +163,10 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
   local cmd, rest = string.match(msg, "^(%S+)%s*(.-)$")
   if cmd == "spell" and rest and rest ~= "" then
     SPELL_NAME = rest
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r watching spell: "..SPELL_NAME)
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r watching: " .. SPELL_NAME)
   elseif cmd == "debug" then
     DEBUG = not DEBUG
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r debug is "..(DEBUG and "ON" or "OFF"))
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r debug " .. (DEBUG and "ON" or "OFF"))
   elseif cmd == "test" then
     maybeEmote()
   else
