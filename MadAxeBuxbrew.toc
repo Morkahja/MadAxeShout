@@ -1,5 +1,18 @@
 ## Interface: 11200
 ## Title: MadAxeBuxbrew
-## Notes: Fire one custom /e when you cast Battle Shout (ultra-simple)
-## Version: 1.0
+## Author: Alex Ludwig
+## Version: 2.1
+## Notes: Fires one random custom /emote when you press the action button slot you configure. Includes a 90s cooldown. 
+## Notes: Commands:
+## Notes:   /mae slot <number>  - Set which action slot to watch (see /mae watch to find slot numbers).
+## Notes:   /mae watch          - Toggle showing slot numbers when you press buttons (helps to find the right slot).
+## Notes:   /mae emote          - Fires a random emote immediately for testing.
+## Notes: 
+## Notes: How it works:
+## Notes:   1. Place Battle Shout (or any ability you want) on your action bar.
+## Notes:   2. Type /mae watch and press the ability to see its slot number in chat.
+## Notes:   3. Set that number with /mae slot <number>.
+## Notes:   4. From now on, pressing that action slot will fire one random custom emote, no more than once every 90s.
+## SavedVariables: 
+
 MadAxeBuxbrew.lua
