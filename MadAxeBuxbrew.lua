@@ -1,94 +1,97 @@
--- MadAxeBuxbrew v2.5.1 (Vanilla/Turtle 1.12)
--- Fires one random /emote when you press your chosen action slot.
--- Cooldown: 90 seconds. Slot persists across reloads/logouts.
-
--- IMPORTANT: Do not assign MadAxeBuxbrewDB at top-level. The client fills it from WTF on load.
+-- MadAxeBuxbrew v2.5.2 (Vanilla/Turtle 1.12)
 
 -------------------------------------------------
 -- CONFIG: Emotes
 -------------------------------------------------
 local EMOTES = {
-  "lets out a hearty roar that shakes her tits and her mug alike.",
-  "howls with laughter like the tavern just broke into a brawl.",
-  "beats her cleavage with her axe haft, daring the room to cheer louder.",
-  "laughs like she’s already drunk and already winning.",
-  "raises her axe high, foam dripping from her lips.",
-  "growls a rowdy tavern-chant, boots stomping in time.",
-  "roars a boozy challenge, hips swaying as she grins.",
-  "stomps the stone floor till mugs rattle on the tables.",
-  "throws her head back, tits bouncing, howling at the ceiling.",
-  "stomps a bawdy rhythm, hips and mutton shaking with each beat.",
-  "bellows loud enough to shake the barrels stacked in the corner.",
-  "pounds her chest and tits with both fists like a drunken champion.",
-  "throws her head back and howls, ale spraying from her grin.",
-  "radiates joy so fierce it feels like stone walls are shaking.",
-  "swings her axe in a wide arc, nearly toppling a keg.",
-  "lets her axe hum while her tits bounce to the rhythm.",
-  "bangs her axe on the bar, sparks flying with laughter.",
-  "spins her axe like a dance partner, grinning wild.",
-  "taps her axe haft on her thigh like a tavern drum.",
-  "hoists her axe with a grunt, tits wobbling, ready to strike.",
-  "snaps her axe into both hands, grinning ear to ear.",
-  "tosses her axe, catches it mid-spin, and winks.",
-  "leans into her axe, tits pressed tight, daring anyone to step up.",
-  "slashes the air, then roars like she just won a drinking contest.",
-  "holds her axe to her cleavage, then slams it down at her feet.",
-  "scrapes steel on her armor, sparks flying like barfight foreplay.",
-  "kicks over a chair and cackles like it’s just the start.",
-  "wipes ale foam off her tits and grins wickedly.",
-  "clinks two mugs between her breasts until they shatter.",
-  "lifts her mug high, tits bouncing with the cheer.",
-  "laughs as she lights a fuse with her cigar stub.",
-  "slams open a keg tap with her axe and roars.",
-  "grins wide as the keg froths over like her cleavage.",
-  "stands in the ale haze, tits gleaming, laughing.",
-  "slams a keg down so hard the stone floor trembles.",
-  "kicks a keg rolling, laughing as it bursts.",
-  "juggles mugs on her tits, tossing one in someone’s face.",
-  "lets her powder horn puff smoke while she smirks.",
-  "slaps a bar tab down on her cleavage and laughs.",
-  "slams her mug down, spilling ale as she charges.",
-  "strikes flint on her axe before rushing in.",
-  "boots stomp, tits bounce, keg spills — she laughs louder.",
-  "plants her boots on the table, the tavern roars back.",
-  "her joy flares, mugs slam in rhythm with her laugh.",
-  "unleashes a roar that rattles every mug and rib in the room.",
+  "lets out a savage roar.",
+  "howls like a beast unchained.",
+  "beats her chest with her weapon hilt.",
+  "laughs like a berserker as the scent of blood fills the air.",
+  "raises her weapon high.",
+  "growls a deep war-chant.",
+  "roars a brutal challenge.",
+  "stomps the ground.",
+  "howls skyward.",
+  "stomps in rhythm.",
+  "bellows to the wind.",
+  "pounds her chest with both fists.",
+  "throws her head back and howls.",
+  "radiates unshakable fury.",
+  "swings her weapon in a wide arc.",
+  "lets her weapon hum with fury.",
+  "bangs her weapon on iron plates.",
+  "spins her weapon with one hand, letting the wind scream through it.",
+  "taps her weapon against her thigh like a war drum.",
+  "raises her weapon with a grunt, rallying for the first strike.",
+  "snaps her weapon into both hands, grinning ear to ear.",
+  "throws her weapon up, catches it mid-spin, and laughs.",
+  "leans into her weapon with a low growl, daring anyone to charge.",
+  "slashes the air in front of her, then roars with glee.",
+  "holds her weapon to her heart, then slams it down at her feet.",
+  "scrapes her weapon across her armor, sparks flying before the storm.",
+  "kicks over a chair and snarls like she's starting a bar fight.",
+  "wipes ale foam from her mouth and grins.",
+  "clinks two mugs together till they shatter.",
+  "lifts her mug high, catching the torchlight in her grin.",
+  "laughs as she lights a fuse with her cigar.",
+  "slams a keg tap open as she lets out a war cry.",
+  "grins wide as the fuse burns on her powder keg.",
+  "stands in the ale haze, laughing as the fight starts.",
+  "slams a keg down hard enough to make the tables jump.",
+  "kicks a keg downhill and grins as it bursts open.",
+  "juggles three mugs before throwing one in someone's face.",
+  "lets her powder horn puff smoke as she laughs.",
+  "slaps a bar tab down and walks away laughing.",
+  "slams her mug down and charges.",
+  "strikes flint on her mug handle before charging.",
+  "kicks over a keg and grins as it spills.",
+  "slams her boots on the table, the tavern roars.",
+  "flares with rage, mugs start to slam.",
+  "unleashes a roar that rattles every mug in the room.",
   "lets her laugh tear through the tavern like a warhorn.",
-  "brims with hearty bliss, air thick with ale and joy.",
-  "lets her presence fire up every drunk within reach.",
-  "stands tall on the table, tits bouncing, rallying every brawler.",
-  "raises her mug, foam flying, the room explodes in cheers.",
-  "howls so loud mugs topple off stone tables.",
-  "stomps the stone floor till the whole hall shakes.",
-  "fills the air with joy, the tavern roars back in kind.",
-  "beats her tits with her fists, mugs sloshing harder nearby.",
-  "so full of joy even the calm can’t help but shout.",
-  "drives her cheer into the air, and the crowd answers.",
-  "steps forward, tits jiggling, the front line surges.",
-  "flexes her sturdy frame, the room grips tighter.",
-  "calls the storm o’ stone through her veins.",
-  "lets bliss flow till even the earth feels ready to cheer.",
-  "erupts with presence, hesitation burns away.",
-  "ignites hearty fire, it spreads through every heart.",
-  "whips the spirit of brawling into her kin with one joyful shout.",
+  "brims with fury so thick the air smells like spilled ale.",
+  "lets her presence fire up every drunk in the hall.",
+  "stands tall on the table, every brawler swings harder.",
+  "raises her mug, the room drowns in cheers.",
+  "howls so loud it makes mugs jump off tables.",
+  "stomps the floorboards till dust falls from the rafters.",
+  "channels her rage, the whole tavern roars with her.",
+  "beats her chest as every mug nearby sloshes harder.",
+  "unleashes such fury that even the calm start screaming.",
+  "drives her will into the air and the air answers.",
+  "steps forward, the front line surges with strength.",
+  "tenses her muscles, as everyone tightens their grip.",
+  "calls the storm through her veins.",
+  "lets her fury flow, as even the earth seems ready to strike.",
+  "erupts with presence and all hesitation burns away.",
+  "ignites a fire so fierce it spreads through every heart.",
+  "lashes the spirit of war into her kin with one brutal shout.",
 }
-
 
 -------------------------------------------------
 -- STATE
 -------------------------------------------------
-local WATCH_SLOT       = nil   -- loaded from SavedVariables after VARIABLES_LOADED
+local WATCH_SLOT       = nil
 local WATCH_MODE       = false
 local LAST_EMOTE_TIME  = 0
-local EMOTE_COOLDOWN   = 90    -- seconds
+local EMOTE_COOLDOWN   = 90
 
 -------------------------------------------------
 -- Helpers
 -------------------------------------------------
-local function msg(text)
+local function chat(text)
   if DEFAULT_CHAT_FRAME then
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r " .. text)
   end
+end
+
+local function ensureDB()
+  -- If some other addon (or a bad SV) made this a string, fix it on the spot.
+  if type(MadAxeBuxbrewDB) ~= "table" then
+    MadAxeBuxbrewDB = {}
+  end
+  return MadAxeBuxbrewDB
 end
 
 local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
@@ -107,12 +110,12 @@ local function doEmoteNow()
 end
 
 -------------------------------------------------
--- Hook UseAction (1.12 style)
+-- Hook UseAction (1.12)
 -------------------------------------------------
 local _Orig_UseAction = UseAction
 function UseAction(slot, checkCursor, onSelf)
   if WATCH_MODE then
-    msg("pressed slot " .. tostring(slot))
+    chat("pressed slot " .. tostring(slot))
   end
   if WATCH_SLOT and slot == WATCH_SLOT then
     doEmoteNow()
@@ -127,64 +130,75 @@ SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(raw)
   local s = (raw or ""):gsub("^%s+", "")
   local cmd, rest = s:match("^(%S+)%s*(.-)$")
+
   if cmd == "slot" then
     local n = tonumber(rest)
     if n then
       WATCH_SLOT = n
-      if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
-      MadAxeBuxbrewDB.slot = n
-      msg("watching action slot " .. n .. " (saved).")
+      ensureDB().slot = n   -- <— cannot explode even if DB was a string
+      chat("watching action slot " .. n .. " (saved).")
     else
-      msg("usage: /mae slot <number>")
+      chat("usage: /mae slot <number>")
     end
+
   elseif cmd == "watch" then
     WATCH_MODE = not WATCH_MODE
-    msg("watch mode " .. (WATCH_MODE and "ON" or "OFF"))
+    chat("watch mode " .. (WATCH_MODE and "ON" or "OFF"))
+
   elseif cmd == "emote" then
     doEmoteNow()
+
   elseif cmd == "info" then
-    msg("watching slot: " .. (WATCH_SLOT and tostring(WATCH_SLOT) or "none"))
-    msg("cooldown: " .. EMOTE_COOLDOWN .. "s")
+    chat("watching slot: " .. (WATCH_SLOT and tostring(WATCH_SLOT) or "none"))
+    chat("cooldown: " .. EMOTE_COOLDOWN .. "s")
+
   elseif cmd == "timer" then
     local remain = EMOTE_COOLDOWN - (GetTime() - LAST_EMOTE_TIME)
     if remain < 0 then remain = 0 end
-    msg("time left: " .. string.format("%.1f", remain) .. "s")
+    chat("time left: " .. string.format("%.1f", remain) .. "s")
+
   elseif cmd == "reset" then
     WATCH_SLOT = nil
-    if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
-    MadAxeBuxbrewDB.slot = nil
-    msg("cleared saved slot.")
+    ensureDB().slot = nil
+    chat("cleared saved slot.")
+
   elseif cmd == "save" then
-    if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
-    MadAxeBuxbrewDB.slot = WATCH_SLOT
-    msg("saved now.")
+    ensureDB().slot = WATCH_SLOT
+    chat("saved now.")
+
+  elseif cmd == "debug" then
+    chat("type(MadAxeBuxbrewDB) = " .. type(MadAxeBuxbrewDB))
+    local cur = (type(MadAxeBuxbrewDB) == "table") and tostring(MadAxeBuxbrewDB.slot) or "n/a"
+    chat("SV slot = " .. cur .. ", WATCH_SLOT = " .. tostring(WATCH_SLOT))
+
   else
-    msg("/mae slot <number> | /mae watch | /mae emote | /mae info | /mae timer | /mae reset | /mae save")
+    chat("/mae slot <number> | /mae watch | /mae emote | /mae info | /mae timer | /mae reset | /mae save | /mae debug")
   end
 end
 
 -------------------------------------------------
--- Init and shutdown: load SVs and seed RNG
+-- Init / Save / RNG
 -------------------------------------------------
-local initFrame = CreateFrame("Frame")
-initFrame:RegisterEvent("VARIABLES_LOADED") -- SVs are ready
-initFrame:RegisterEvent("PLAYER_LOGIN")     -- safe to seed RNG
-initFrame:RegisterEvent("PLAYER_LOGOUT")    -- mirror to disk
+local f = CreateFrame("Frame")
+f:RegisterEvent("VARIABLES_LOADED")
+f:RegisterEvent("PLAYER_LOGIN")
+f:RegisterEvent("PLAYER_LOGOUT")
 
-initFrame:SetScript("OnEvent", function(_, event)
+f:SetScript("OnEvent", function(_, event)
   if event == "VARIABLES_LOADED" then
-    if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
+    -- If SV came in as a string (bad file or collision), fix and continue.
+    ensureDB()
     WATCH_SLOT = MadAxeBuxbrewDB.slot or nil
     if WATCH_SLOT then
-      msg("loaded slot " .. tostring(WATCH_SLOT))
+      chat("loaded slot " .. tostring(WATCH_SLOT))
     else
-      msg("no saved slot found")
+      chat("no saved slot found")
     end
+
   elseif event == "PLAYER_LOGIN" then
-    math.randomseed(math.floor(GetTime() * 1000))
-    math.random() -- toss first value for older Lua RNG quirk
+    math.randomseed(math.floor(GetTime() * 1000)); math.random()
+
   elseif event == "PLAYER_LOGOUT" then
-    if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
-    MadAxeBuxbrewDB.slot = WATCH_SLOT
+    ensureDB().slot = WATCH_SLOT
   end
 end)
