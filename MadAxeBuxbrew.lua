@@ -1,20 +1,13 @@
--- MadAxeBuxbrew v1.7 (Turtle/Vanilla 1.12)
--- Polls player buffs to detect Battle Shout gain and outputs one random /e.
+-- MadAxeBuxbrew (ultra-simple, Turtle/Vanilla 1.12)
+-- Immediately posts a random custom /e when you CAST Battle Shout.
+-- No spam protection, no aura checks, just name match on cast.
 
 -------------------------------------------------
 -- CONFIG
 -------------------------------------------------
-local COOLDOWN = 4     -- seconds between outputs
-local DEBUG    = false -- /mae debug
-local POLL_EVERY = 0.2 -- seconds, buff poll interval
+local SPELL_NAME = "Battle Shout"  -- change if you play in another locale with /mae spell <name>
 
--- Icon path for Battle Shout (locale-agnostic)
-local BS_ICON = "Interface\\Icons\\Ability_Warrior_BattleShout"
-
--- Optional Vanilla spell IDs (not required, icon is enough)
-local BS_IDS = { [6673]=true,[5242]=true,[6192]=true,[11549]=true,[11550]=true,[11551]=true }
-
--- Buxbrew emotes
+-- Your custom emotes (ASCII quotes only)
 local EMOTES = {
   "lets out a savage roar.",
   "howls like a beast unchained.",
@@ -82,140 +75,56 @@ local EMOTES = {
 }
 
 -------------------------------------------------
--- 1.12-safe helpers (no '#' operator, no varargs)
+-- Helpers (1.12-safe)
 -------------------------------------------------
 local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
-local function rand(t) local n=tlen(t); if n<1 then return nil end; return t[math.random(1,n)] end
-local function dprint(msg) if DEBUG then DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE DEBUG:|r "..tostring(msg)) end end
-
--------------------------------------------------
--- Buff readers
--- Prefer classic PlayerBuff API; fallback to UnitBuff if server backported it.
--------------------------------------------------
-local function hasBS_PlayerBuff()
-  for i=0,31 do
-    local bi = GetPlayerBuff(i, "HELPFUL")
-    if bi and bi >= 0 then
-      local tex = GetPlayerBuffTexture(bi)
-      if tex == BS_ICON then return true end
-      -- Optional: if name available, accept "Battle Shout" (with or without rank)
-      if GetPlayerBuffName then
-        local nm = GetPlayerBuffName(bi)
-        if nm then
-          local base = string.gsub(nm, "%s*%b()", "")
-          if base == "Battle Shout" then return true end
-        end
-      end
-    end
-  end
-  return false
-end
-
-local function hasBS_UnitBuff()
-  for i=1,32 do
-    local a,b,c,d,e,f,g = UnitBuff("player", i)
-    if not a then break end
-    local icon = a
-    local name = nil
-    if c and type(c)=="string" and string.find(c,"Interface\\") then
-      icon = c
-      name = a
-    end
-    if icon == BS_ICON then return true end
-    if name == "Battle Shout" then return true end
-    if g and BS_IDS[g] then return true end
-  end
-  return false
-end
-
-local function playerHasBS()
-  if GetPlayerBuff then return hasBS_PlayerBuff() end
-  if UnitBuff then return hasBS_UnitBuff() end
-  return false
+local function pick(t) local n=tlen(t); if n<1 then return nil end; return t[math.random(1,n)] end
+local function doEmoteNow()
+  local e = pick(EMOTES)
+  if e then SendChatMessage(e, "EMOTE") end
 end
 
 -------------------------------------------------
--- Core
+-- Hook cast functions (Vanilla UI paths)
 -------------------------------------------------
-local lastOut = 0
-local hadBS   = false
-local acc     = 0
-
-local function maybeEmote()
-  local now = GetTime()
-  if now - lastOut < COOLDOWN then dprint("cooldown"); return end
-  lastOut = now
-  local e = rand(EMOTES)
-  if e then SendChatMessage(e, "EMOTE"); dprint("emote: "..e) end
+local _Orig_CastSpellByName = CastSpellByName
+function CastSpellByName(name, onSelf)
+  if name and string.find(name, SPELL_NAME, 1, true) then
+    doEmoteNow()
+  end
+  return _Orig_CastSpellByName(name, onSelf)
 end
 
-local f = CreateFrame("Frame")
-f:SetScript("OnUpdate", function(_, elapsed)
-  acc = acc + (elapsed or 0)
-  if acc < POLL_EVERY then return end
-  acc = 0
-
-  local has = playerHasBS()
-  if (not hadBS) and has then
-    dprint("Battle Shout detected (polled)")
-    maybeEmote()
+local _Orig_CastSpell = CastSpell
+function CastSpell(slot, bookType)
+  -- Vanilla has GetSpellName(slot, bookType) for spellbook casts
+  local sName = nil
+  if slot and bookType then
+    sName = GetSpellName(slot, bookType)
   end
-  hadBS = has
-end)
-
-f:SetScript("OnEvent", function(_, event)
-  if event == "PLAYER_ENTERING_WORLD" then
-    math.randomseed(math.floor(GetTime()*1000))
-    hadBS = playerHasBS()
-    dprint("loaded; BS present: "..tostring(hadBS))
+  if sName and string.find(sName, SPELL_NAME, 1, true) then
+    doEmoteNow()
   end
-end)
-f:RegisterEvent("PLAYER_ENTERING_WORLD")
+  return _Orig_CastSpell(slot, bookType)
+end
+
+-- (Optional) If you use macros that call UseAction directly, the above still
+-- works because UseAction ends up calling CastSpell/CastSpellByName for spells
+-- in the default 1.12 UI. If your custom bar bypasses that, tell me which bar.
 
 -------------------------------------------------
--- Slash: /mae debug | /mae dump | /mae test
+-- Slash helpers
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
   msg = msg or ""; msg = string.gsub(msg, "^%s+", "")
-  if msg == "debug" then
-    DEBUG = not DEBUG
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r debug "..(DEBUG and "ON" or "OFF"))
-  elseif msg == "test" then
-    maybeEmote()
-  elseif msg == "dump" then
-    DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00MAE DUMP:|r scanning buffs")
-    if GetPlayerBuff then
-      for i=0,31 do
-        local bi = GetPlayerBuff(i, "HELPFUL")
-        if bi and bi >= 0 then
-          local tex = GetPlayerBuffTexture(bi)
-          local nm = GetPlayerBuffName and GetPlayerBuffName(bi)
-          DEFAULT_CHAT_FRAME:AddMessage("["..i.."] idx="..bi.." tex="..tostring(tex).." name="..tostring(nm))
-        end
-      end
-    elseif UnitBuff then
-      for i=1,32 do
-        local a,b,c,d,e,f,g = UnitBuff("player", i)
-        if not a then break end
-        DEFAULT_CHAT_FRAME:AddMessage("["..i.."] a="..tostring(a).." c="..tostring(c).." gID="..tostring(g))
-      end
-    else
-      DEFAULT_CHAT_FRAME:AddMessage("No known buff API on this client.")
-    end
+  local cmd, rest = string.match(msg, "^(%S+)%s*(.-)$")
+  if cmd == "spell" and rest and rest ~= "" then
+    SPELL_NAME = rest
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r watching: "..SPELL_NAME)
+  elseif cmd == "emote" then
+    doEmoteNow()
   else
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae debug | /mae dump | /mae test")
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae spell <name>  |  /mae emote")
   end
 end
-
-SLASH_MADAXEBUXBREW2 = "/maeemote"
-SlashCmdList["MADAXEBUXBREW2"] = function()
-  local e = rand(EMOTES)
-  if e then
-    SendChatMessage(e, "EMOTE")
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE TEST:|r "..e)
-  else
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE TEST:|r no emotes in list")
-  end
-end
-
