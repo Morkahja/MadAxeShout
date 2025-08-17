@@ -104,6 +104,11 @@ local EMOTES = {
 "presses a mug to her chest, ale spilling everywhere as she roars.",
 "licks her fingers clean, then drags them slow over her bosom.",
 "snaps a bone in half with her teeth, juice running down her chin.",
+"presses a rib to her lips, juice running down her chin and over her bust.",
+"lets ale foam spill down her cleavage, licking slow and shameless.",
+"buries her teeth in a boar rib, grease shining on her melons as she laughs.",
+"tips a mug between her jugs and drinks as it spills everywhere.",
+"cracks a bone, sucking it loud, eyes wicked with mischief.",
 
 
 }
