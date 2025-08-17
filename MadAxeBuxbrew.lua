@@ -1,9 +1,8 @@
--- MadAxeBuxbrew v2.5.3 (Vanilla/Turtle 1.12)
--- Fires one random /emote when you press your chosen action slot.
--- Cooldown: 90 seconds. Slot persists across reloads/logouts.
+-- MadAxeBuxbrew v2.5.5 (Vanilla/Turtle 1.12)
+-- Per-character SavedVariables. Lua 5.0-safe string handling.
 
 -------------------------------------------------
--- CONFIG: Emotes
+-- Emotes (edit as you like)
 -------------------------------------------------
 local EMOTES = {
   "lets out a savage roar.",
@@ -72,12 +71,12 @@ local EMOTES = {
 }
 
 -------------------------------------------------
--- STATE
+-- State
 -------------------------------------------------
-local WATCH_SLOT       = nil
-local WATCH_MODE       = false
-local LAST_EMOTE_TIME  = 0
-local EMOTE_COOLDOWN   = 90
+local WATCH_SLOT = nil
+local WATCH_MODE = false
+local LAST_EMOTE_TIME = 0
+local EMOTE_COOLDOWN = 90
 
 -------------------------------------------------
 -- Helpers
@@ -89,14 +88,29 @@ local function chat(text)
 end
 
 local function ensureDB()
-  -- If SV collided and became a string/number/nil, force a table.
   if type(MadAxeBuxbrewDB) ~= "table" then
     MadAxeBuxbrewDB = {}
   end
   return MadAxeBuxbrewDB
 end
 
-local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
+-- one-time lazy load in case events fire oddly on this client
+local _mae_loaded_once = false
+local function ensureLoaded()
+  if not _mae_loaded_once then
+    local db = ensureDB()
+    if WATCH_SLOT == nil then
+      WATCH_SLOT = db.slot or nil
+    end
+    _mae_loaded_once = true
+  end
+end
+
+local function tlen(t)
+  if t and table.getn then return table.getn(t) end
+  return 0
+end
+
 local function pick(t)
   local n = tlen(t)
   if n < 1 then return nil end
@@ -116,6 +130,7 @@ end
 -------------------------------------------------
 local _Orig_UseAction = UseAction
 function UseAction(slot, checkCursor, onSelf)
+  ensureLoaded()
   if WATCH_MODE then
     chat("pressed slot " .. tostring(slot))
   end
@@ -126,10 +141,11 @@ function UseAction(slot, checkCursor, onSelf)
 end
 
 -------------------------------------------------
--- Slash Commands (no colon on strings — use string.* for 1.12)
+-- Slash Commands (Lua 5.0-safe: use string.*)
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(raw)
+  ensureLoaded()
   local s = raw or ""
   s = string.gsub(s, "^%s+", "")
   local cmd, rest = string.match(s, "^(%S+)%s*(.-)$")
@@ -187,25 +203,19 @@ end
 -------------------------------------------------
 local f = CreateFrame("Frame")
 f:RegisterEvent("VARIABLES_LOADED")
+f:RegisterEvent("PLAYER_ENTERING_WORLD") -- some 1.12 forks prefer this order
 f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("PLAYER_LOGOUT")
 
-f:SetScript("OnEvent", function(_, event)
-  if event == "VARIABLES_LOADED" then
+f:SetScript("OnEvent", function(self, event)
+  if event == "VARIABLES_LOADED" or event == "PLAYER_ENTERING_WORLD" then
     local db = ensureDB()
-    WATCH_SLOT = db.slot or nil
-    if WATCH_SLOT then
-      chat("loaded slot " .. tostring(WATCH_SLOT))
-    else
-      chat("no saved slot found")
-    end
-
+    WATCH_SLOT = db.slot or WATCH_SLOT
+    -- uncomment if you want a boot message:
+    -- chat("loaded slot " .. tostring(WATCH_SLOT or "none"))
   elseif event == "PLAYER_LOGIN" then
-    math.randomseed(math.floor(GetTime() * 1000))
-    math.random() -- toss first
-
+    math.randomseed(math.floor(GetTime() * 1000)); math.random()
   elseif event == "PLAYER_LOGOUT" then
-    local db = ensureDB()
-    db.slot = WATCH_SLOT
+    ensureDB().slot = WATCH_SLOT
   end
 end)
