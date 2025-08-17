@@ -84,6 +84,17 @@ local EMOTES = {
 "gives her tits a playful lift before stomping into the fray.",
 "swings her shoulders, tits bouncing like twin drums of war.",
 "presses her axe haft between her tits, laughing loud as steel hums.",
+  "licks sauce off her lips slow, eyes daring anyone to taste more.",
+"grabs a rib bone, bites deep, and moans loud like it’s more than food.",
+"lets ale foam spill over her chest, laughing as it runs down.",
+"sucks marrow from a bone with a grin that’s filthy as sin.",
+"wipes grease across her cleavage and smirks, 'who’s hungry?'",
+"tilts a mug back too far, ale pouring down her neck between her tits.",
+"bites her lip as she licks her fingers clean of sauce.",
+"shoves a rib in her mouth, shakes her tits, and growls with joy.",
+"slaps her axe haft into a half-eaten rib and licks it clean.",
+"drinks deep, burps loud, and winks with foam on her chin.",
+
 }
 
 
