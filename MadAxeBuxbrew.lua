@@ -94,6 +94,17 @@ local EMOTES = {
 "shoves a rib in her mouth, shakes her tits, and growls with joy.",
 "slaps her axe haft into a half-eaten rib and licks it clean.",
 "drinks deep, burps loud, and winks with foam on her chin.",
+  "slurps ale and lets it drip down her rack like it’s a showpiece.",
+"wipes rib-grease across her bosom and laughs wickedly.",
+"grabs a mug with both jugs pressed round it, chugging deep.",
+"licks marrow from a bone, moaning like it’s no feast at all.",
+"lets foam slide down her cleavage, winking at the nearest fool.",
+"takes a bite of meat and shakes her melons with the chew.",
+"smears sauce across her bust, grinning at the mess.",
+"presses a mug to her chest, ale spilling everywhere as she roars.",
+"licks her fingers clean, then drags them slow over her bosom.",
+"snaps a bone in half with her teeth, juice running down her chin.",
+
 
 }
 
