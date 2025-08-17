@@ -1,6 +1,6 @@
 ## Interface: 11200
 ## Title: MadAxeBuxbrew
-## Version: 2.2
+## Version: 1
 ## Notes: Fires one random /emote when you press the configured action slot (e.g., Battle Shout). 90s cooldown.
 ## Notes: /mae — slot <n>, watch, emote, info, timer
 ## SavedVariables: MadAxeBuxbrewDB
