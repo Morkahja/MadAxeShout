@@ -1,14 +1,11 @@
--- MadAxeBuxbrew v2.5 (Vanilla/Turtle 1.12)
--- Fires one random custom /emote when you press your chosen action slot.
+-- MadAxeBuxbrew v2.5.1 (Vanilla/Turtle 1.12)
+-- Fires one random /emote when you press your chosen action slot.
 -- Cooldown: 90 seconds. Slot persists across reloads/logouts.
 
--- IMPORTANT: Do NOT assign the SavedVariables here. The client will populate them.
--- Globals created by the engine (declared in .toc):
---   MadAxeBuxbrewDB        (account-wide)
---   MadAxeBuxbrewDBPC      (per-character)
+-- IMPORTANT: Do not assign MadAxeBuxbrewDB at top-level. The client fills it from WTF on load.
 
 -------------------------------------------------
--- CONFIG: Buxbrew emotes
+-- CONFIG: Emotes
 -------------------------------------------------
 local EMOTES = {
   "lets out a savage roar.",
@@ -79,13 +76,13 @@ local EMOTES = {
 -------------------------------------------------
 -- STATE
 -------------------------------------------------
-local WATCH_SLOT       = nil      -- loaded from SVs
+local WATCH_SLOT       = nil   -- loaded from SavedVariables after VARIABLES_LOADED
 local WATCH_MODE       = false
 local LAST_EMOTE_TIME  = 0
-local EMOTE_COOLDOWN   = 90       -- seconds
+local EMOTE_COOLDOWN   = 90    -- seconds
 
 -------------------------------------------------
--- Utils
+-- Helpers
 -------------------------------------------------
 local function msg(text)
   if DEFAULT_CHAT_FRAME then
@@ -100,32 +97,6 @@ local function pick(t)
   return t[math.random(1, n)]
 end
 
-local function readFromSaved()
-  -- Prefer per-character DB if present; else account-wide
-  if type(MadAxeBuxbrewDBPC) == "table" and MadAxeBuxbrewDBPC.slot ~= nil then
-    WATCH_SLOT = MadAxeBuxbrewDBPC.slot
-    msg("loaded slot "..tostring(WATCH_SLOT).." (per-character)")
-  elseif type(MadAxeBuxbrewDB) == "table" and MadAxeBuxbrewDB.slot ~= nil then
-    WATCH_SLOT = MadAxeBuxbrewDB.slot
-    msg("loaded slot "..tostring(WATCH_SLOT).." (account-wide)")
-  else
-    WATCH_SLOT = nil
-    msg("no saved slot found")
-  end
-end
-
-local function writeToSaved()
-  -- Ensure both tables exist
-  if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
-  if type(MadAxeBuxbrewDBPC) ~= "table" then MadAxeBuxbrewDBPC = {} end
-
-  -- Save to per-character by default (more practical); also mirror to account DB
-  MadAxeBuxbrewDBPC.slot = WATCH_SLOT
-  MadAxeBuxbrewDB.slot   = WATCH_SLOT
-
-  msg("saving slot "..tostring(WATCH_SLOT or "nil"))
-end
-
 local function doEmoteNow()
   local now = GetTime()
   if now - LAST_EMOTE_TIME < EMOTE_COOLDOWN then return end
@@ -135,7 +106,7 @@ local function doEmoteNow()
 end
 
 -------------------------------------------------
--- Hook UseAction (1.12)
+-- Hook UseAction (1.12 style)
 -------------------------------------------------
 local _Orig_UseAction = UseAction
 function UseAction(slot, checkCursor, onSelf)
@@ -159,7 +130,8 @@ SlashCmdList["MADAXEBUXBREW"] = function(raw)
     local n = tonumber(rest)
     if n then
       WATCH_SLOT = n
-      writeToSaved()
+      if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
+      MadAxeBuxbrewDB.slot = n
       msg("watching action slot " .. n .. " (saved).")
     else
       msg("usage: /mae slot <number>")
@@ -178,10 +150,12 @@ SlashCmdList["MADAXEBUXBREW"] = function(raw)
     msg("time left: " .. string.format("%.1f", remain) .. "s")
   elseif cmd == "reset" then
     WATCH_SLOT = nil
-    writeToSaved()
+    if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
+    MadAxeBuxbrewDB.slot = nil
     msg("cleared saved slot.")
   elseif cmd == "save" then
-    writeToSaved()
+    if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
+    MadAxeBuxbrewDB.slot = WATCH_SLOT
     msg("saved now.")
   else
     msg("/mae slot <number> | /mae watch | /mae emote | /mae info | /mae timer | /mae reset | /mae save")
@@ -189,23 +163,27 @@ SlashCmdList["MADAXEBUXBREW"] = function(raw)
 end
 
 -------------------------------------------------
--- Init & Shutdown
+-- Init and shutdown: load SVs and seed RNG
 -------------------------------------------------
-local f = CreateFrame("Frame")
-f:RegisterEvent("VARIABLES_LOADED") -- SVs ready
-f:RegisterEvent("PLAYER_LOGIN")     -- seed RNG
-f:RegisterEvent("PLAYER_LOGOUT")    -- flush SVs one more time
+local initFrame = CreateFrame("Frame")
+initFrame:RegisterEvent("VARIABLES_LOADED") -- SVs are ready
+initFrame:RegisterEvent("PLAYER_LOGIN")     -- safe to seed RNG
+initFrame:RegisterEvent("PLAYER_LOGOUT")    -- mirror to disk
 
-f:SetScript("OnEvent", function(_, event)
+initFrame:SetScript("OnEvent", function(_, event)
   if event == "VARIABLES_LOADED" then
-    -- Ensure tables exist so later writes always succeed
     if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
-    if type(MadAxeBuxbrewDBPC) ~= "table" then MadAxeBuxbrewDBPC = {} end
-    readFromSaved()
+    WATCH_SLOT = MadAxeBuxbrewDB.slot or nil
+    if WATCH_SLOT then
+      msg("loaded slot " .. tostring(WATCH_SLOT))
+    else
+      msg("no saved slot found")
+    end
   elseif event == "PLAYER_LOGIN" then
-    math.randomseed(math.floor(GetTime() * 1000)); math.random() -- toss first
+    math.randomseed(math.floor(GetTime() * 1000))
+    math.random() -- toss first value for older Lua RNG quirk
   elseif event == "PLAYER_LOGOUT" then
-    -- Mirror current state back to SVs for good measure
-    writeToSaved()
+    if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
+    MadAxeBuxbrewDB.slot = WATCH_SLOT
   end
 end)
