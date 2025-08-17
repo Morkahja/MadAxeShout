@@ -1,4 +1,6 @@
--- MadAxeBuxbrew v2.5.2 (Vanilla/Turtle 1.12)
+-- MadAxeBuxbrew v2.5.3 (Vanilla/Turtle 1.12)
+-- Fires one random /emote when you press your chosen action slot.
+-- Cooldown: 90 seconds. Slot persists across reloads/logouts.
 
 -------------------------------------------------
 -- CONFIG: Emotes
@@ -87,7 +89,7 @@ local function chat(text)
 end
 
 local function ensureDB()
-  -- If some other addon (or a bad SV) made this a string, fix it on the spot.
+  -- If SV collided and became a string/number/nil, force a table.
   if type(MadAxeBuxbrewDB) ~= "table" then
     MadAxeBuxbrewDB = {}
   end
@@ -124,18 +126,20 @@ function UseAction(slot, checkCursor, onSelf)
 end
 
 -------------------------------------------------
--- Slash Commands
+-- Slash Commands (no colon on strings — use string.* for 1.12)
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(raw)
-  local s = (raw or ""):gsub("^%s+", "")
-  local cmd, rest = s:match("^(%S+)%s*(.-)$")
+  local s = raw or ""
+  s = string.gsub(s, "^%s+", "")
+  local cmd, rest = string.match(s, "^(%S+)%s*(.-)$")
 
   if cmd == "slot" then
     local n = tonumber(rest)
     if n then
       WATCH_SLOT = n
-      ensureDB().slot = n   -- <— cannot explode even if DB was a string
+      local db = ensureDB()
+      db.slot = n
       chat("watching action slot " .. n .. " (saved).")
     else
       chat("usage: /mae slot <number>")
@@ -157,48 +161,4 @@ SlashCmdList["MADAXEBUXBREW"] = function(raw)
     if remain < 0 then remain = 0 end
     chat("time left: " .. string.format("%.1f", remain) .. "s")
 
-  elseif cmd == "reset" then
-    WATCH_SLOT = nil
-    ensureDB().slot = nil
-    chat("cleared saved slot.")
-
-  elseif cmd == "save" then
-    ensureDB().slot = WATCH_SLOT
-    chat("saved now.")
-
-  elseif cmd == "debug" then
-    chat("type(MadAxeBuxbrewDB) = " .. type(MadAxeBuxbrewDB))
-    local cur = (type(MadAxeBuxbrewDB) == "table") and tostring(MadAxeBuxbrewDB.slot) or "n/a"
-    chat("SV slot = " .. cur .. ", WATCH_SLOT = " .. tostring(WATCH_SLOT))
-
-  else
-    chat("/mae slot <number> | /mae watch | /mae emote | /mae info | /mae timer | /mae reset | /mae save | /mae debug")
-  end
-end
-
--------------------------------------------------
--- Init / Save / RNG
--------------------------------------------------
-local f = CreateFrame("Frame")
-f:RegisterEvent("VARIABLES_LOADED")
-f:RegisterEvent("PLAYER_LOGIN")
-f:RegisterEvent("PLAYER_LOGOUT")
-
-f:SetScript("OnEvent", function(_, event)
-  if event == "VARIABLES_LOADED" then
-    -- If SV came in as a string (bad file or collision), fix and continue.
-    ensureDB()
-    WATCH_SLOT = MadAxeBuxbrewDB.slot or nil
-    if WATCH_SLOT then
-      chat("loaded slot " .. tostring(WATCH_SLOT))
-    else
-      chat("no saved slot found")
-    end
-
-  elseif event == "PLAYER_LOGIN" then
-    math.randomseed(math.floor(GetTime() * 1000)); math.random()
-
-  elseif event == "PLAYER_LOGOUT" then
-    ensureDB().slot = WATCH_SLOT
-  end
-end)
+  elsei
