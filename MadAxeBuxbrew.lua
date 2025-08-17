@@ -1,8 +1,8 @@
--- MadAxeBuxbrew v2.4.99 (rollback) — Turtle/1.12, Lua 5.0-safe
--- Account-wide SavedVariables: MadAxeBuxbrewDB
+-- MadAxeBuxbrew v2.5.5 (Vanilla/Turtle 1.12)
+-- Per-character SavedVariables. Lua 5.0-safe string handling.
 
 -------------------------------------------------
--- Emotes
+-- Emotes (edit as you like)
 -------------------------------------------------
 local EMOTES = {
   "lets out a hearty roar that shakes her tits and her mug alike.",
@@ -74,27 +74,49 @@ local EMOTES = {
 -------------------------------------------------
 -- State
 -------------------------------------------------
-local WATCH_SLOT      = nil
-local WATCH_MODE      = false
+local WATCH_SLOT = nil
+local WATCH_MODE = false
 local LAST_EMOTE_TIME = 0
-local EMOTE_COOLDOWN  = 90
+local EMOTE_COOLDOWN = 90
 
 -------------------------------------------------
 -- Helpers
 -------------------------------------------------
-local function chat(t)
+local function chat(text)
   if DEFAULT_CHAT_FRAME then
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r " .. t)
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r " .. text)
   end
 end
 
 local function ensureDB()
-  if type(MadAxeBuxbrewDB) ~= "table" then MadAxeBuxbrewDB = {} end
+  if type(MadAxeBuxbrewDB) ~= "table" then
+    MadAxeBuxbrewDB = {}
+  end
   return MadAxeBuxbrewDB
 end
 
-local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
-local function pick(t) local n=tlen(t); if n<1 then return nil end; return t[math.random(1,n)] end
+-- one-time lazy load in case events fire oddly on this client
+local _mae_loaded_once = false
+local function ensureLoaded()
+  if not _mae_loaded_once then
+    local db = ensureDB()
+    if WATCH_SLOT == nil then
+      WATCH_SLOT = db.slot or nil
+    end
+    _mae_loaded_once = true
+  end
+end
+
+local function tlen(t)
+  if t and table.getn then return table.getn(t) end
+  return 0
+end
+
+local function pick(t)
+  local n = tlen(t)
+  if n < 1 then return nil end
+  return t[math.random(1, n)]
+end
 
 local function doEmoteNow()
   local now = GetTime()
@@ -109,16 +131,22 @@ end
 -------------------------------------------------
 local _Orig_UseAction = UseAction
 function UseAction(slot, checkCursor, onSelf)
-  if WATCH_MODE then chat("pressed slot " .. tostring(slot)) end
-  if WATCH_SLOT and slot == WATCH_SLOT then doEmoteNow() end
+  ensureLoaded()
+  if WATCH_MODE then
+    chat("pressed slot " .. tostring(slot))
+  end
+  if WATCH_SLOT and slot == WATCH_SLOT then
+    doEmoteNow()
+  end
   return _Orig_UseAction(slot, checkCursor, onSelf)
 end
 
 -------------------------------------------------
--- Slash (/mae)
+-- Slash Commands (Lua 5.0-safe: use string.*)
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(raw)
+  ensureLoaded()
   local s = raw or ""
   s = string.gsub(s, "^%s+", "")
   local cmd, rest = string.match(s, "^(%S+)%s*(.-)$")
@@ -127,7 +155,8 @@ SlashCmdList["MADAXEBUXBREW"] = function(raw)
     local n = tonumber(rest)
     if n then
       WATCH_SLOT = n
-      ensureDB().slot = n
+      local db = ensureDB()
+      db.slot = n
       chat("watching action slot " .. n .. " (saved).")
     else
       chat("usage: /mae slot <number>")
@@ -151,16 +180,22 @@ SlashCmdList["MADAXEBUXBREW"] = function(raw)
 
   elseif cmd == "reset" then
     WATCH_SLOT = nil
-    ensureDB().slot = nil
+    local db = ensureDB()
+    db.slot = nil
     chat("cleared saved slot.")
+
+  elseif cmd == "save" then
+    local db = ensureDB()
+    db.slot = WATCH_SLOT
+    chat("saved now.")
 
   elseif cmd == "debug" then
     local t = type(MadAxeBuxbrewDB)
-    local v = (t == "table") and tostring(MadAxeBuxbrewDB.slot or "nil") or "n/a"
-    chat("DB="..t.." | SV slot="..v.." | WATCH_SLOT="..tostring(WATCH_SLOT))
+    local v = (t == "table") and tostring(MadAxeBuxbrewDB.slot) or "n/a"
+    chat("type(MadAxeBuxbrewDB)=" .. t .. " | SV slot=" .. v .. " | WATCH_SLOT=" .. tostring(WATCH_SLOT))
 
   else
-    chat("/mae slot <n> | watch | emote | info | timer | reset | debug")
+    chat("/mae slot <number> | /mae watch | /mae emote | /mae info | /mae timer | /mae reset | /mae save | /mae debug")
   end
 end
 
@@ -168,22 +203,20 @@ end
 -- Init / Save / RNG
 -------------------------------------------------
 local f = CreateFrame("Frame")
-f:RegisterEvent("VARIABLES_LOADED") -- SVs are guaranteed ready here
-f:RegisterEvent("PLAYER_LOGIN")     -- seed RNG
-f:RegisterEvent("PLAYER_LOGOUT")    -- flush to disk
+f:RegisterEvent("VARIABLES_LOADED")
+f:RegisterEvent("PLAYER_ENTERING_WORLD") -- some 1.12 forks prefer this order
+f:RegisterEvent("PLAYER_LOGIN")
+f:RegisterEvent("PLAYER_LOGOUT")
 
-f:SetScript("OnEvent", function(_, event)
-  if event == "VARIABLES_LOADED" then
+f:SetScript("OnEvent", function(self, event)
+  if event == "VARIABLES_LOADED" or event == "PLAYER_ENTERING_WORLD" then
     local db = ensureDB()
-    WATCH_SLOT = db.slot or nil
-    chat("loaded slot " .. tostring(WATCH_SLOT or "none"))
-
+    WATCH_SLOT = db.slot or WATCH_SLOT
+    -- uncomment if you want a boot message:
+    -- chat("loaded slot " .. tostring(WATCH_SLOT or "none"))
   elseif event == "PLAYER_LOGIN" then
-    math.randomseed(math.floor(GetTime()*1000)); math.random()
-
+    math.randomseed(math.floor(GetTime() * 1000)); math.random()
   elseif event == "PLAYER_LOGOUT" then
-    if WATCH_SLOT ~= nil then
-      ensureDB().slot = WATCH_SLOT
-    end
+    ensureDB().slot = WATCH_SLOT
   end
 end)
