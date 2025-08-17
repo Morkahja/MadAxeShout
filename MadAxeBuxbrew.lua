@@ -1,13 +1,10 @@
--- MadAxeBuxbrew (ultra-simple, Turtle/Vanilla 1.12)
--- Immediately posts a random custom /e when you CAST Battle Shout.
--- No spam protection, no aura checks, just name match on cast.
+-- MadAxeBuxbrew v2.0 (Vanilla/Turtle 1.12)
+-- Minimal: fires ONE custom /e when you press the configured action slot.
+-- No cooldowns, no aura checks, no chat events. Just UseAction hook.
 
 -------------------------------------------------
--- CONFIG
+-- CONFIG: put your Buxbrew emotes here
 -------------------------------------------------
-local SPELL_NAME = "Battle Shout"  -- change if you play in another locale with /mae spell <name>
-
--- Your custom emotes (ASCII quotes only)
 local EMOTES = {
   "lets out a savage roar.",
   "howls like a beast unchained.",
@@ -75,56 +72,66 @@ local EMOTES = {
 }
 
 -------------------------------------------------
--- Helpers (1.12-safe)
+-- SIMPLE STATE
 -------------------------------------------------
+local WATCH_SLOT = nil     -- set via /mae slot <number>
+local WATCH_MODE = false   -- /mae watch toggles printing slot numbers you press
+
+-- 1.12-safe helpers
 local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
 local function pick(t) local n=tlen(t); if n<1 then return nil end; return t[math.random(1,n)] end
+
 local function doEmoteNow()
   local e = pick(EMOTES)
   if e then SendChatMessage(e, "EMOTE") end
 end
 
 -------------------------------------------------
--- Hook cast functions (Vanilla UI paths)
+-- HOOK UseAction (this is what fires when you press an action button)
 -------------------------------------------------
-local _Orig_CastSpellByName = CastSpellByName
-function CastSpellByName(name, onSelf)
-  if name and string.find(name, SPELL_NAME, 1, true) then
+local _Orig_UseAction = UseAction
+function UseAction(slot, checkCursor, onSelf)
+  if WATCH_MODE then
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r pressed slot "..tostring(slot))
+  end
+  if WATCH_SLOT and slot == WATCH_SLOT then
+    -- fire immediately, no checks
     doEmoteNow()
   end
-  return _Orig_CastSpellByName(name, onSelf)
+  return _Orig_UseAction(slot, checkCursor, onSelf)
 end
-
-local _Orig_CastSpell = CastSpell
-function CastSpell(slot, bookType)
-  -- Vanilla has GetSpellName(slot, bookType) for spellbook casts
-  local sName = nil
-  if slot and bookType then
-    sName = GetSpellName(slot, bookType)
-  end
-  if sName and string.find(sName, SPELL_NAME, 1, true) then
-    doEmoteNow()
-  end
-  return _Orig_CastSpell(slot, bookType)
-end
-
--- (Optional) If you use macros that call UseAction directly, the above still
--- works because UseAction ends up calling CastSpell/CastSpellByName for spells
--- in the default 1.12 UI. If your custom bar bypasses that, tell me which bar.
 
 -------------------------------------------------
--- Slash helpers
+-- SLASH COMMANDS
+-- /mae slot <number>   -> set which slot to watch
+-- /mae watch           -> toggle showing slot numbers when you press buttons
+-- /mae emote           -> manual test (fires one emote)
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
   msg = msg or ""; msg = string.gsub(msg, "^%s+", "")
   local cmd, rest = string.match(msg, "^(%S+)%s*(.-)$")
-  if cmd == "spell" and rest and rest ~= "" then
-    SPELL_NAME = rest
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r watching: "..SPELL_NAME)
+  if cmd == "slot" then
+    local n = tonumber(rest)
+    if n then
+      WATCH_SLOT = n
+      DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r watching action slot "..n..".")
+    else
+      DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r usage: /mae slot <number>")
+    end
+  elseif cmd == "watch" then
+    WATCH_MODE = not WATCH_MODE
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r watch mode "..(WATCH_MODE and "ON" or "OFF"))
   elseif cmd == "emote" then
     doEmoteNow()
   else
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MadAxeBuxbrew:|r /mae spell <name>  |  /mae emote")
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r /mae slot <number>  |  /mae watch  |  /mae emote")
   end
 end
+
+-- seed randomness at login
+local f = CreateFrame("Frame")
+f:SetScript("OnEvent", function()
+  math.randomseed(math.floor(GetTime()*1000))
+end)
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
