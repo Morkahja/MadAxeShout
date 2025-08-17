@@ -69,7 +69,12 @@ local EMOTES = {
   "drives her cheer into the air, and the crowd answers.",
   "steps forward, tits jiggling, the front line surges.",
   "flexes her sturdy frame, the room grips tighter.",
-  "calls the storm o’ stone through her
+  "calls the storm o’ stone through her veins.",
+  "lets bliss flow till even the earth feels ready to cheer.",
+  "erupts with presence, hesitation burns away.",
+  "ignites hearty fire, it spreads through every heart.",
+  "whips the spirit of brawling into her kin with one joyful shout.",
+}
 
 
 -------------------------------------------------
