@@ -74,25 +74,19 @@ local EMOTES = {
 local COOLDOWN = 90 -- seconds between emotes
 
 -------------------------------------------------
--- STATE
+-- SIMPLE STATE
 -------------------------------------------------
-local WATCH_SLOT = nil
-local WATCH_MODE = false
-local lastEmoteTime = 0
+local WATCH_SLOT = nil     -- current slot number
+local WATCH_MODE = false   -- debug watch mode
 
--- helpers
-local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
-local function pick(t) local n=tlen(t); if n<1 then return nil end; return t[math.random(1,n)] end
-
-local function doEmoteNow()
-  local now = GetTime()
-  if now - lastEmoteTime < COOLDOWN then
-    return -- still on cooldown
-  end
-  lastEmoteTime = now
-  local e = pick(EMOTES)
-  if e then SendChatMessage(e, "EMOTE") end
-end
+-- load saved state
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
+f:SetScript("OnEvent", function()
+  if not MadAxeBuxbrewDB then MadAxeBuxbrewDB = {} end
+  if MadAxeBuxbrewDB.slot then WATCH_SLOT = MadAxeBuxbrewDB.slot end
+  math.randomseed(math.floor(GetTime()*1000))
+end)
 
 -------------------------------------------------
 -- HOOK UseAction
@@ -115,14 +109,16 @@ SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
   msg = msg or ""; msg = string.gsub(msg, "^%s+", "")
   local cmd, rest = string.match(msg, "^(%S+)%s*(.-)$")
-  if cmd == "slot" then
+    if cmd == "slot" then
     local n = tonumber(rest)
     if n then
       WATCH_SLOT = n
-      DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r watching action slot "..n..".")
+      MadAxeBuxbrewDB.slot = n   -- save it
+      DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r watching action slot "..n..". (Saved)")
     else
       DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r usage: /mae slot <number>")
     end
+
   elseif cmd == "watch" then
     WATCH_MODE = not WATCH_MODE
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r watch mode "..(WATCH_MODE and "ON" or "OFF"))
