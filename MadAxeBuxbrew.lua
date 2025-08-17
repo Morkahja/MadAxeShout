@@ -1,7 +1,11 @@
--- MadAxeBuxbrew v2.4 (Vanilla/Turtle 1.12)
+-- MadAxeBuxbrew v2.5 (Vanilla/Turtle 1.12)
 -- Fires one random custom emote when you press your chosen action slot.
--- Cooldown: 90 seconds. Slot persists via SavedVariables.
--- /mae slot <n> | /mae watch | /mae emote | /mae info | /mae timer | /mae reset
+-- Cooldown: 90 seconds. Slot persists across reloads/logouts.
+
+-------------------------------------------------
+-- SavedVariables (classic 1.12 pattern)
+-------------------------------------------------
+MadAxeBuxbrewDB = MadAxeBuxbrewDB or {}     -- engine fills if present; otherwise keep {}
 
 -------------------------------------------------
 -- CONFIG: Buxbrew emotes
@@ -73,12 +77,12 @@ local EMOTES = {
 }
 
 -------------------------------------------------
--- STATE (runtime only; SavedVariables live in MadAxeBuxbrewDB)
+-- STATE
 -------------------------------------------------
-local WATCH_SLOT = nil
-local WATCH_MODE = false
-local LAST_EMOTE_TIME = 0
-local EMOTE_COOLDOWN = 90 -- seconds
+local WATCH_SLOT       = MadAxeBuxbrewDB.slot or nil   -- load immediately
+local WATCH_MODE       = false
+local LAST_EMOTE_TIME  = 0
+local EMOTE_COOLDOWN   = 90 -- seconds
 
 -------------------------------------------------
 -- Helpers
@@ -119,8 +123,7 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
     local n = tonumber(rest)
     if n then
       WATCH_SLOT = n
-      if not MadAxeBuxbrewDB then MadAxeBuxbrewDB = {} end
-      MadAxeBuxbrewDB.slot = n
+      MadAxeBuxbrewDB.slot = n       -- persist immediately
       DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r watching action slot "..n.." (saved).")
     else
       DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r usage: /mae slot <number>")
@@ -139,7 +142,7 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
     if remain < 0 then remain = 0 end
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r time left: "..string.format("%.1f", remain).."s")
   elseif cmd == "reset" then
-    if MadAxeBuxbrewDB then MadAxeBuxbrewDB.slot = nil end
+    MadAxeBuxbrewDB.slot = nil
     WATCH_SLOT = nil
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r cleared saved slot.")
   else
@@ -148,18 +151,10 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
 end
 
 -------------------------------------------------
--- Load SavedVariables at the right time + seed RNG
+-- Seed RNG once on login
 -------------------------------------------------
-local loader = CreateFrame("Frame")
-loader:RegisterEvent("VARIABLES_LOADED")
-loader:RegisterEvent("PLAYER_ENTERING_WORLD")
-loader:SetScript("OnEvent", function(_, event)
-  if event == "VARIABLES_LOADED" then
-    -- SavedVariables are ready now; read the saved slot
-    if MadAxeBuxbrewDB and MadAxeBuxbrewDB.slot then
-      WATCH_SLOT = MadAxeBuxbrewDB.slot
-    end
-  elseif event == "PLAYER_ENTERING_WORLD" then
-    math.randomseed(math.floor(GetTime()*1000))
-  end
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
+f:SetScript("OnEvent", function()
+  math.randomseed(math.floor(GetTime()*1000))
 end)
