@@ -161,4 +161,51 @@ SlashCmdList["MADAXEBUXBREW"] = function(raw)
     if remain < 0 then remain = 0 end
     chat("time left: " .. string.format("%.1f", remain) .. "s")
 
-  elsei
+  elseif cmd == "reset" then
+    WATCH_SLOT = nil
+    local db = ensureDB()
+    db.slot = nil
+    chat("cleared saved slot.")
+
+  elseif cmd == "save" then
+    local db = ensureDB()
+    db.slot = WATCH_SLOT
+    chat("saved now.")
+
+  elseif cmd == "debug" then
+    local t = type(MadAxeBuxbrewDB)
+    local v = (t == "table") and tostring(MadAxeBuxbrewDB.slot) or "n/a"
+    chat("type(MadAxeBuxbrewDB)=" .. t .. " | SV slot=" .. v .. " | WATCH_SLOT=" .. tostring(WATCH_SLOT))
+
+  else
+    chat("/mae slot <number> | /mae watch | /mae emote | /mae info | /mae timer | /mae reset | /mae save | /mae debug")
+  end
+end
+
+-------------------------------------------------
+-- Init / Save / RNG
+-------------------------------------------------
+local f = CreateFrame("Frame")
+f:RegisterEvent("VARIABLES_LOADED")
+f:RegisterEvent("PLAYER_LOGIN")
+f:RegisterEvent("PLAYER_LOGOUT")
+
+f:SetScript("OnEvent", function(_, event)
+  if event == "VARIABLES_LOADED" then
+    local db = ensureDB()
+    WATCH_SLOT = db.slot or nil
+    if WATCH_SLOT then
+      chat("loaded slot " .. tostring(WATCH_SLOT))
+    else
+      chat("no saved slot found")
+    end
+
+  elseif event == "PLAYER_LOGIN" then
+    math.randomseed(math.floor(GetTime() * 1000))
+    math.random() -- toss first
+
+  elseif event == "PLAYER_LOGOUT" then
+    local db = ensureDB()
+    db.slot = WATCH_SLOT
+  end
+end)
