@@ -1,12 +1,7 @@
--- MadAxeBuxbrew v2.2 (Vanilla/Turtle 1.12)
+-- MadAxeBuxbrew v2.3 (Vanilla/Turtle 1.12)
 -- Fires one random custom emote when you press your chosen action slot.
 -- Cooldown: 90 seconds. Slot is saved between sessions.
--- Commands:
---   /mae slot <num>  -> set which action slot to watch
---   /mae watch       -> toggle watch mode (debug, shows pressed slots)
---   /mae emote       -> fire one emote manually
---   /mae info        -> show current watched slot + cooldown settings
---   /mae timer       -> show remaining cooldown until next emote
+-- /mae slot <n> | /mae watch | /mae emote | /mae info | /mae timer
 
 -------------------------------------------------
 -- CONFIG: Buxbrew emotes
@@ -80,7 +75,10 @@ local EMOTES = {
 -------------------------------------------------
 -- STATE
 -------------------------------------------------
-local WATCH_SLOT = nil
+-- Create the SavedVariables table immediately so it's safe in slash handlers
+if not MadAxeBuxbrewDB then MadAxeBuxbrewDB = {} end
+
+local WATCH_SLOT = MadAxeBuxbrewDB.slot or nil
 local WATCH_MODE = false
 local LAST_EMOTE_TIME = 0
 local EMOTE_COOLDOWN = 90 -- seconds
@@ -124,7 +122,7 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
     local n = tonumber(rest)
     if n then
       WATCH_SLOT = n
-      MadAxeBuxbrewDB.slot = n
+      MadAxeBuxbrewDB.slot = n  -- persist immediately
       DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r watching action slot "..n.." (saved).")
     else
       DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r usage: /mae slot <number>")
@@ -148,12 +146,18 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
 end
 
 -------------------------------------------------
--- On Login: init DB + random seed
+-- Load saved data after variables are ready + seed RNG
 -------------------------------------------------
-local f = CreateFrame("Frame")
-f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:SetScript("OnEvent", function()
-  if not MadAxeBuxbrewDB then MadAxeBuxbrewDB = {} end
-  if MadAxeBuxbrewDB.slot then WATCH_SLOT = MadAxeBuxbrewDB.slot end
-  math.randomseed(math.floor(GetTime()*1000))
+local loader = CreateFrame("Frame")
+loader:RegisterEvent("VARIABLES_LOADED")
+loader:RegisterEvent("PLAYER_ENTERING_WORLD")
+loader:SetScript("OnEvent", function(_, event)
+  if event == "VARIABLES_LOADED" then
+    -- Make sure we see persisted slot after reload/login
+    if MadAxeBuxbrewDB and MadAxeBuxbrewDB.slot then
+      WATCH_SLOT = MadAxeBuxbrewDB.slot
+    end
+  elseif event == "PLAYER_ENTERING_WORLD" then
+    math.randomseed(math.floor(GetTime()*1000))
+  end
 end)
