@@ -74,6 +74,16 @@ local EMOTES = {
   "lets her tits bounce as she pounds her chest.",
   "shakes her hips like a tavern dancer mid-brawl.",
   "moans out a laugh, cheeks flushed with heat and fight.",
+  "presses her tits together with a wicked grin, daring the foe to look.",
+"shakes her jugs so wild it looks like part of the war dance.",
+"laughs as her tits slap against her chest in rhythm.",
+"arches forward, tits swinging like battering rams of joy.",
+"cups her breasts once, then throws her axe high with a roar.",
+"lets her cleavage jiggle bold as she leans into the fight.",
+"claps her tits together like tankards, grinning drunk on battle.",
+"gives her tits a playful lift before stomping into the fray.",
+"swings her shoulders, tits bouncing like twin drums of war.",
+"presses her axe haft between her tits, laughing loud as steel hums.",
 }
 
 
