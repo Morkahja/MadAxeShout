@@ -1,7 +1,7 @@
 ## Interface: 11200
 ## Title: MadAxeBuxbrew (Per-Character)
-## Version: 2.6.0
-## Notes: Fires one random /emote when you press the configured action slot. 90s cooldown. Commands: /maepc slot <n>, watch, emote, info, timer, reset, save, debug
+## Version: 2.6.1
+## Notes: Fires one random /emote when you press the configured action slot. 90s cooldown. Commands: /maepc or /mae
 ## SavedVariablesPerCharacter: MadAxeBuxbrewPCDB
 
 MadAxeBuxbrewPC.lua
