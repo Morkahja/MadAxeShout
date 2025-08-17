@@ -1,8 +1,8 @@
--- MadAxeBuxbrew v2.5.6 (Vanilla/Turtle 1.12)
--- Per-character SavedVariables (MadAxeBuxbrewDBPC). Lua 5.0-safe.
+-- MadAxeBuxbrew v2.5.7 (Vanilla/Turtle 1.12)
+-- Per-character SV (MadAxeBuxbrewDBPC). Lua 5.0-safe; robust load & nil-safe save.
 
 -------------------------------------------------
--- Emotes (edit as you like)
+-- Emotes
 -------------------------------------------------
 local EMOTES = {
   "lets out a hearty roar that shakes her tits and her mug alike.",
@@ -70,6 +70,7 @@ local EMOTES = {
   "whips the spirit of brawling into her kin with one joyful shout.",
 }
 
+
 -------------------------------------------------
 -- State
 -------------------------------------------------
@@ -87,7 +88,7 @@ local function chat(text)
   end
 end
 
--- Ensure per-character DB table exists
+-- Per-character DB table
 local function ensureDB()
   if type(MadAxeBuxbrewDBPC) ~= "table" then
     MadAxeBuxbrewDBPC = {}
@@ -142,7 +143,7 @@ function UseAction(slot, checkCursor, onSelf)
 end
 
 -------------------------------------------------
--- Slash Commands (Lua 5.0-safe: use string.*)
+-- Slash Commands (Lua 5.0-safe string.*)
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(raw)
@@ -204,7 +205,7 @@ end
 -------------------------------------------------
 local f = CreateFrame("Frame")
 f:RegisterEvent("VARIABLES_LOADED")
-f:RegisterEvent("PLAYER_ENTERING_WORLD") -- helps on some 1.12 forks
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("PLAYER_LOGOUT")
 
@@ -212,10 +213,20 @@ f:SetScript("OnEvent", function(self, event)
   if event == "VARIABLES_LOADED" or event == "PLAYER_ENTERING_WORLD" then
     local db = ensureDB()
     WATCH_SLOT = db.slot or WATCH_SLOT
-    -- chat("loaded slot " .. tostring(WATCH_SLOT or "none")) -- optional boot message
+    if WATCH_SLOT ~= nil then
+      chat("loaded slot " .. tostring(WATCH_SLOT))
+    else
+      chat("no saved slot found")
+    end
+
   elseif event == "PLAYER_LOGIN" then
     math.randomseed(math.floor(GetTime() * 1000)); math.random()
+
   elseif event == "PLAYER_LOGOUT" then
-    ensureDB().slot = WATCH_SLOT
+    -- Avoid wiping the saved value if runtime never set it
+    ensureLoaded()
+    if WATCH_SLOT ~= nil then
+      ensureDB().slot = WATCH_SLOT
+    end
   end
 end)
