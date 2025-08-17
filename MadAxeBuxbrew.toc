@@ -14,5 +14,6 @@
 ## Notes:   3. Set that number with /mae slot <number>.
 ## Notes:   4. From now on, pressing that action slot will fire one random custom emote, no more than once every 90s.
 ## SavedVariables: 
+## SavedVariables: MadAxeBuxbrewDB
 
 MadAxeBuxbrew.lua
