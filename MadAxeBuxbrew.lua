@@ -1,5 +1,4 @@
--- MadAxeBuxbrew v2.5.8 (Turtle/1.12)
--- Per-character SV: MadAxeBuxbrewDBPC
+-- MadAxeBuxbrew (Per-Character) v2.6.0  — Turtle/1.12, Lua 5.0-safe
 
 -------------------------------------------------
 -- Emotes
@@ -85,18 +84,19 @@ local function chat(t)
   if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r " .. t) end
 end
 
+-- Per-character DB key lives in a brand-new file: MadAxeBuxbrewPC.lua
 local function ensureDB()
-  if type(MadAxeBuxbrewDBPC) ~= "table" then MadAxeBuxbrewDBPC = {} end
-  return MadAxeBuxbrewDBPC
+  if type(MadAxeBuxbrewPCDB) ~= "table" then MadAxeBuxbrewPCDB = {} end
+  return MadAxeBuxbrewPCDB
 end
 
--- lazy load from SVs in case events fire weirdly
-local _mae_loaded_once = false
+-- Lazy load once (handles weird event orders)
+local _loaded_once = false
 local function ensureLoaded()
-  if not _mae_loaded_once then
+  if not _loaded_once then
     local db = ensureDB()
     if WATCH_SLOT == nil then WATCH_SLOT = db.slot or nil end
-    _mae_loaded_once = true
+    _loaded_once = true
   end
 end
 
@@ -123,10 +123,10 @@ function UseAction(slot, checkCursor, onSelf)
 end
 
 -------------------------------------------------
--- Slash Commands (Lua 5.0: use string.*)
+-- Slash Commands (use /maepc; no string methods with :)
 -------------------------------------------------
-SLASH_MADAXEBUXBREW1 = "/mae"
-SlashCmdList["MADAXEBUXBREW"] = function(raw)
+SLASH_MADAXEBUXBREWPC1 = "/maepc"
+SlashCmdList["MADAXEBUXBREWPC"] = function(raw)
   ensureLoaded()
   local s = raw or ""
   s = string.gsub(s, "^%s+", "")
@@ -136,11 +136,10 @@ SlashCmdList["MADAXEBUXBREW"] = function(raw)
     local n = tonumber(rest)
     if n then
       WATCH_SLOT = n
-      local db = ensureDB()
-      db.slot = n
-      chat("watching action slot " .. n .. " (saved to memory). /reload to write file.")
+      ensureDB().slot = n
+      chat("watching action slot " .. n .. " (saved in memory; /reload to write file)")
     else
-      chat("usage: /mae slot <number>")
+      chat("usage: /maepc slot <number>")
     end
 
   elseif cmd == "watch" then
@@ -162,19 +161,19 @@ SlashCmdList["MADAXEBUXBREW"] = function(raw)
   elseif cmd == "reset" then
     WATCH_SLOT = nil
     ensureDB().slot = nil
-    chat("cleared saved slot (memory). /reload to flush file.")
+    chat("cleared saved slot (/reload to flush file)")
 
   elseif cmd == "save" then
     ensureDB().slot = WATCH_SLOT
-    chat("saved current slot to memory; /reload to write file.")
+    chat("saved to memory; /reload to write file")
 
   elseif cmd == "debug" then
-    local t = type(MadAxeBuxbrewDBPC)
-    local v = (t == "table") and tostring(MadAxeBuxbrewDBPC.slot) or "n/a"
-    chat("type(MadAxeBuxbrewDBPC)=" .. t .. " | SV slot=" .. v .. " | WATCH_SLOT=" .. tostring(WATCH_SLOT))
+    local t = type(MadAxeBuxbrewPCDB)
+    local v = (t == "table") and tostring(MadAxeBuxbrewPCDB.slot or "nil") or "n/a"
+    chat("DB="..t.." | SV slot="..v.." | WATCH_SLOT="..tostring(WATCH_SLOT))
 
   else
-    chat("/mae slot <n> | watch | emote | info | timer | reset | save | debug")
+    chat("/maepc slot <n> | watch | emote | info | timer | reset | save | debug")
   end
 end
 
@@ -189,19 +188,13 @@ f:RegisterEvent("PLAYER_LOGOUT")
 
 f:SetScript("OnEvent", function(_, event)
   if event == "VARIABLES_LOADED" or event == "PLAYER_ENTERING_WORLD" then
-    local db = ensureDB()
-    WATCH_SLOT = db.slot or WATCH_SLOT
-    if WATCH_SLOT ~= nil then
-      chat("loaded slot " .. tostring(WATCH_SLOT))
-    else
-      chat("no saved slot found")
-    end
+    ensureLoaded()
+    if WATCH_SLOT ~= nil then chat("loaded slot " .. tostring(WATCH_SLOT)) else chat("no saved slot found") end
 
   elseif event == "PLAYER_LOGIN" then
     math.randomseed(math.floor(GetTime()*1000)); math.random()
 
   elseif event == "PLAYER_LOGOUT" then
-    -- Show exactly what will be written on /reload
     ensureLoaded()
     if WATCH_SLOT ~= nil then
       ensureDB().slot = WATCH_SLOT
