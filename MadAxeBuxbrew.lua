@@ -1,7 +1,12 @@
--- MadAxeBuxbrew v2.1 (Vanilla/Turtle 1.12)
+-- MadAxeBuxbrew v2.2 (Vanilla/Turtle 1.12)
 -- Fires one random custom emote when you press your chosen action slot.
 -- Cooldown: 90 seconds. Slot is saved between sessions.
--- Commands: /mae slot <num>, /mae watch, /mae emote
+-- Commands:
+--   /mae slot <num>  -> set which action slot to watch
+--   /mae watch       -> toggle watch mode (debug, shows pressed slots)
+--   /mae emote       -> fire one emote manually
+--   /mae info        -> show current watched slot + cooldown settings
+--   /mae timer       -> show remaining cooldown until next emote
 
 -------------------------------------------------
 -- CONFIG: Buxbrew emotes
@@ -129,8 +134,16 @@ SlashCmdList["MADAXEBUXBREW"] = function(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r watch mode "..(WATCH_MODE and "ON" or "OFF"))
   elseif cmd == "emote" then
     doEmoteNow()
+  elseif cmd == "info" then
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r watching slot: "..(WATCH_SLOT or "none"))
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r cooldown: "..EMOTE_COOLDOWN.."s")
+  elseif cmd == "timer" then
+    local now = GetTime()
+    local remain = EMOTE_COOLDOWN - (now - LAST_EMOTE_TIME)
+    if remain < 0 then remain = 0 end
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r time left: "..string.format("%.1f", remain).."s")
   else
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r /mae slot <number>  |  /mae watch  |  /mae emote")
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r /mae slot <number> | /mae watch | /mae emote | /mae info | /mae timer")
   end
 end
 
