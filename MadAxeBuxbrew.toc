@@ -1,6 +1,5 @@
 ## Interface: 11200
 ## Title: MadAxeBuxbrew
-## Notes: Posts a random /e when Battle Shout buff appears (Turtle/Vanilla 1.12)
-## Version: 1.5
-
+## Notes: Fire one custom /e when you cast Battle Shout (ultra-simple)
+## Version: 1.0
 MadAxeBuxbrew.lua
