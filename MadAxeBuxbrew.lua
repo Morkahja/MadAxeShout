@@ -1,9 +1,9 @@
--- MadAxeBuxbrew v2.0 (Vanilla/Turtle 1.12)
--- Minimal: fires ONE custom /e when you press the configured action slot.
--- No cooldowns, no aura checks, no chat events. Just UseAction hook.
+-- MadAxeBuxbrew v2.1 (Vanilla/Turtle 1.12)
+-- Fires ONE custom /e when you press the configured action slot,
+-- but only once per cooldown (default 90 seconds).
 
 -------------------------------------------------
--- CONFIG: put your Buxbrew emotes here
+-- CONFIG
 -------------------------------------------------
 local EMOTES = {
   "lets out a savage roar.",
@@ -71,23 +71,31 @@ local EMOTES = {
   "lashes the spirit of war into her kin with one brutal shout.",
 }
 
--------------------------------------------------
--- SIMPLE STATE
--------------------------------------------------
-local WATCH_SLOT = nil     -- set via /mae slot <number>
-local WATCH_MODE = false   -- /mae watch toggles printing slot numbers you press
+local COOLDOWN = 90 -- seconds between emotes
 
--- 1.12-safe helpers
+-------------------------------------------------
+-- STATE
+-------------------------------------------------
+local WATCH_SLOT = nil
+local WATCH_MODE = false
+local lastEmoteTime = 0
+
+-- helpers
 local function tlen(t) if t and table.getn then return table.getn(t) end return 0 end
 local function pick(t) local n=tlen(t); if n<1 then return nil end; return t[math.random(1,n)] end
 
 local function doEmoteNow()
+  local now = GetTime()
+  if now - lastEmoteTime < COOLDOWN then
+    return -- still on cooldown
+  end
+  lastEmoteTime = now
   local e = pick(EMOTES)
   if e then SendChatMessage(e, "EMOTE") end
 end
 
 -------------------------------------------------
--- HOOK UseAction (this is what fires when you press an action button)
+-- HOOK UseAction
 -------------------------------------------------
 local _Orig_UseAction = UseAction
 function UseAction(slot, checkCursor, onSelf)
@@ -95,7 +103,6 @@ function UseAction(slot, checkCursor, onSelf)
     DEFAULT_CHAT_FRAME:AddMessage("|cffff8800MAE:|r pressed slot "..tostring(slot))
   end
   if WATCH_SLOT and slot == WATCH_SLOT then
-    -- fire immediately, no checks
     doEmoteNow()
   end
   return _Orig_UseAction(slot, checkCursor, onSelf)
@@ -103,9 +110,6 @@ end
 
 -------------------------------------------------
 -- SLASH COMMANDS
--- /mae slot <number>   -> set which slot to watch
--- /mae watch           -> toggle showing slot numbers when you press buttons
--- /mae emote           -> manual test (fires one emote)
 -------------------------------------------------
 SLASH_MADAXEBUXBREW1 = "/mae"
 SlashCmdList["MADAXEBUXBREW"] = function(msg)
