@@ -213,7 +213,7 @@ f:SetScript("OnEvent", function(self, event)
     local db = ensureDB()
     WATCH_SLOT = db.slot or WATCH_SLOT
     -- uncomment if you want a boot message:
-    -- chat("loaded slot " .. tostring(WATCH_SLOT or "none"))
+    chat("loaded slot " .. tostring(WATCH_SLOT or "none"))
   elseif event == "PLAYER_LOGIN" then
     math.randomseed(math.floor(GetTime() * 1000)); math.random()
   elseif event == "PLAYER_LOGOUT" then
