@@ -109,7 +109,26 @@ local EMOTES = {
 "buries her teeth in a boar rib, grease shining on her melons as she laughs.",
 "tips a mug between her jugs and drinks as it spills everywhere.",
 "cracks a bone, sucking it loud, eyes wicked with mischief.",
-
+"shoves a frothing mug deep into her cleavage, laughing as ale spills everywhere.",
+  "lets a mug slide down her busty chest, catching it with a wicked grin.",
+  "pours ale between her heavy jugs and drinks it straight from the flow.",
+  "clinks her mug against her stacked rack, foam splashing wild.",
+  "tips a tankard over her full breasts, licking the foam with a smirk.",
+  "presses a frothing mug into her fat cleavage, shaking till it spills over.",
+  "balances her axe on her wide bouncy rack, grinning like it’s a party trick.",
+  "smears ale foam across her busty chest and licks it off slow.",
+  "lets her overflowing tankard slide down her stacked shelf, giggling wickedly.",
+  "slams her mug down and makes her hefty jugs jiggle with the cheer.",
+  "squeezes her ale-soaked rack together, foam spraying everywhere.",
+  "pours brew down her deep valley and drinks from the stream with a roar.",
+  "rests her frothy mug on her bouncing tits, hands free and grinning.",
+  "shakes her dripping bust so ale splatters the front row.",
+  "tucks a tankard between her wobbling melons and drinks hands-free.",
+  "presses her mugs tight to her chest, ale spilling like a waterfall.",
+  "lets her soft heavy rack jiggle while she chugs a full keg.",
+  "rubs her soaked cleavage against her mug before slamming it down.",
+  "squeezes her bust hard enough to make the ale foam rise higher.",
+  "throws her head back, tits bouncing, ale pouring straight into her mouth.",
 
 }
 
